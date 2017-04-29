@@ -13,7 +13,7 @@
 -define(MTI_SIZE,4).
 
 
-%%this is for performing a binary fold kind of like a list fold
+%% @doc this is for performing a binary fold kind of like a list fold
 -spec fold_bin(Fun, T, Bin) -> T when
 	Fun  		:: fun((Input, T) -> {Reminder, T}),
 	Bin  		:: binary(),
@@ -26,7 +26,7 @@ fold_bin(Fun, Accum, Bin) ->
 		fold_bin(Fun, NewAccum, NewBin).
 
 
-%%this is for padding a binary up to a length of N digits with a binary character
+%% @doc this is for padding a binary up to a length of N digits with a binary character
 %%mostly used in the bitmap
 %%pad character size <2
 -spec pad_data(binary(),integer(),binary())->binary().
@@ -35,13 +35,13 @@ pad_data(Bin,Number,Character,Counter) when Counter > 0 -> pad_data(<<Character/
 pad_data(Bin,_Number,_Character,Counter) when Counter =< 0 -> Bin.
 
 
-%% integer binary containing bitmap
+%% @doc  integer binary containing bitmap
 -spec convert_base(integer())->binary().
 convert_base(Data_Base_10)->
 		erlang:integer_to_binary(Data_Base_10,2).
 				
 	  	
-%%this converts data between bases and also pads the data  for our purposes
+%% @doc this converts data between bases and also pads the data  for our purposes
 -spec convert_base_pad(integer(),integer(),binary())->binary().
 convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
         Data_base2 = convert_base(Data_Base_10),
