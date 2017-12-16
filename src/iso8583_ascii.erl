@@ -51,7 +51,7 @@ convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
 %% @doc this part accepts a postilion list iso message with the header removed and extracts the mti,bitmap,data elements into a map object 
 %% exceptions can be thrown here if the string for the message hasnt been formatted well but they should be caught in whichever code is calling the system 
 %%the data is first converted into a binary before the processing is done . much faster and uses less memory than using lists
--spec unpack(list,post,binary())->map().
+-spec unpack(list,post,list())->map().
 unpack(list,post,Rest)-> 
 		%%io:format("~ninit message is ~s",[Rest]),
 		Bin_message = erlang:list_to_binary(Rest),
@@ -64,17 +64,17 @@ unpack(list,post,Rest)->
 -spec process_binary(binary(),atom())->map().
 process_binary(Bin_message,Message_Area)->
 		{Btmptrans,Msegt,Spec_fun,Map_Init} = case Message_Area of
-								post ->
-									<<One_dig/integer>> = binary_part(Bin_message,4,1),
-									Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
-														<<"0">> -> 8;
-														<<"1">> -> 16
-											  end,		
-									<<Mti:?MTI_SIZE/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
-									Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One/integer>> <= Bitmap_Segment >>,
-									Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
-									Bit_map = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
-									{Bit_mess,<<Bitmap_Segment/binary,Rest/binary>>,fun(Index_f)->iso8583_ascii_post:get_spec_field(Index_f)end,Bit_map} 
+			post ->
+				<<One_dig/integer>> = binary_part(Bin_message,4,1),
+				Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
+									<<"0">> -> 8;
+									<<"1">> -> 16
+						  end,		
+				<<Mti:?MTI_SIZE/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
+				Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One/integer>> <= Bitmap_Segment >>,
+				Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
+				Bit_map = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
+				{Bit_mess,<<Bitmap_Segment/binary,Rest/binary>>,fun(Index_f)->iso8583_ascii_post:get_spec_field(Index_f)end,Bit_map} 
 											  end,	
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
