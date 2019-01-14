@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/1]).
+-export([unpack/3,pack/2]).
 
 -define(MTI_SIZE,4).
 
@@ -74,11 +74,18 @@ process_binary(Bin_message,Module_process)->
 		Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One/integer>> <= Bitmap_Segment >>,
 		Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
 		Map_Init = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
-		Spec_fun = fun(Index_f)->Module_process:get_spec_field(Index_f)end,
-		Msegt = <<Bitmap_Segment/binary,Rest/binary>>,
+		Result_process = process_data_element(Bit_mess,Rest,Module_process),
+		maps:merge(Result_process,Map_Init).
+		
+
+
+%%for processing the message given the bitmap and the binary containing the data elements
+-spec process_data_element(binary(),binary(),atom())->map().
+process_data_element(Bitmap,Data_binary,Module_process)->
+		Map_Init = maps:new(),
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
-					{_Ftype,Flength,Fx_var_fixed,Fx_header_length,_DataElemName} = Spec_fun(Current_index_in),
+					{_,Flength,Fx_var_fixed,Fx_header_length,_} = Module_process:get_spec_field(Current_index_in),
 					Data_index = case Fx_var_fixed of
 						fx -> 
 							Data_element_fx = binary:part(Data_for_use_in,Index_start_in,Flength),
@@ -96,14 +103,10 @@ process_binary(Bin_message,Module_process)->
 					NewMap = maps:put(Current_index_in,Data_element,Map_out_list_in),
 					Fld_num_out = Current_index_in + 1, 
 					{Rest_bin,{Data_for_use_in,New_Index,Fld_num_out,NewMap}};
-				(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"0">>,Current_index_in =:=1->
-					New_Index_fx = Index_start_in+8,
-					Fld_num_out = Current_index_in + 1,					
-					{Rest_bin,{Data_for_use_in,New_Index_fx,Fld_num_out,Map_out_list_in}};
 			    (<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"0">> ->
 					Fld_num_out = Current_index_in + 1,					
 					{Rest_bin,{Data_for_use_in,Index_start_in,Fld_num_out,Map_out_list_in}}
-			end, {Msegt,0,1,Map_Init},Bit_mess),
+			end, {Data_binary,0,2,Map_Init},Bitmap),
 		{_,_,_,Fldata} = OutData,
 		Fldata.
 
@@ -114,27 +117,69 @@ pack(Message_Map,Module_process)->
 		Process_value = 
 		fun(Field_key,Acc={Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
 			case maps:get(Field_key,Message_Map,error) of
-				Value ->
-					New_Bitmap = << Bitmap/binary,<<"1">>/binary >>,
-					New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
-					
-					{New_Bitmap,Bit_exist_secondary,New_Iso_Fields_Binary};
 				error ->
-					New_Bitmap = << Bitmap/binary,<<"0">>/binary >>,
-					{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary}
+					Value_bit = erlang:integer_to_binary(0,2),
+					New_Bitmap = << Bitmap/binary,Value_bit/binary >>,
+					{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary};
+				Value ->
+					 Check_secondary = Field_key >= 65 andalso Bit_exist_secondary =:= false,
+					 case Check_secondary of 
+							true ->
+								Value_bit = erlang:integer_to_binary(1,2),
+								New_Bitmap = << Value_bit/binary, Bitmap/binary,Value_bit/binary >>,
+								New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
+								{New_Bitmap,true,New_Iso_Fields_Binary};
+							false ->
+								Value_bit = erlang:integer_to_binary(1,2),
+								New_Bitmap = << Bitmap/binary,Value_bit/binary >>,
+								New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
+								{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary}
+					end
 			end
 		end,
 		lists:foldl(Process_value,{<<>>,false,<<>>},lists:seq(2,128)).
 
 
+
+
+%%this will be used for formatting the data which is sent 
+%%it is done at the setting stage
+%%it checks if data is of the correct length and type for numbers and simple strings and binaries
+%%%also adds paddings and as well as headers to the various values
+%%not full featured but just enough to make it work
+-spec format_data(integer()|mti,term(),atom())->{ok,term()}|{error,term()}.
+format_data(Key,Value,Module_process)->
+	{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
+	case Ftype of
+		n ->  %%iput will be number
+		  Numb_check = erlang:integer_to_binary(Value),
+		  erlang:is_number(n) andalso Flength =< erlang:size(Numb_check) ;
+		b ->  %%  input will be binary
+			ok;
+		ans -> %% input will be alphnumberic string
+			ok;
+		ns ->  %% input will be numeric and special character string
+			ok;
+		hex -> %% input will be hexadecimal string
+			ok
+	end.
+
+
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer()|binary() ,Fld_val::term())->{ok,map()}.
-set_field(Iso_Map,Fld_num,Fld_val)->
-		New_iso_map = maps:put(Fld_num, Fld_val,Iso_Map),
-		{ok,New_iso_map}.
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|binary() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
+set_field(Iso_Map,Fld_num,Fld_val,Module_process)->
+		Resp = format_data(Fld_num,Fld_val,Module_process),
+		case Resp of
+			{ok,Val} ->
+				New_iso_map = maps:put(Fld_num,Val,Iso_Map),
+				{ok,New_iso_map};
+			Result = {error,Reason}->
+				Result
+		end.
 		
+
 %% @doc this is for getting a particular field in an iso message back
 -spec get_field(Fld_num::pos_integer()|binary(),Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->

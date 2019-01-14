@@ -23,7 +23,7 @@ unpack(Mformat,Module_process,IsoMessage)->
 	Map_pack ::map(),
 	Module_process  	:: atom.
 pack(Map_pack,Module_process)->
-	iso8583_ascii:pack(Map_pack).
+	iso8583_ascii:pack(Map_pack,Module_process).
 
 %%====================================================================
 %% Internal functions
