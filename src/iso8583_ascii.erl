@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/2]).
+-export([unpack/3,pack/2,set_field/4,get_field/2,pad_data/3]).
 
 -define(MTI_SIZE,4).
 
@@ -64,7 +64,6 @@ unpack(list,Module_process,Rest)->
 %%all data needed to calculate bitmamp should be part of input to this function 
 -spec process_binary(binary(),atom())->map().
 process_binary(Bin_message,Module_process)->
-		{Btmptrans,Msegt,Spec_fun,Map_Init} = 
 		<<One_dig/integer>> = binary_part(Bin_message,4,1),
 		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
 							<<"0">> -> 8;
@@ -77,7 +76,6 @@ process_binary(Bin_message,Module_process)->
 		Result_process = process_data_element(Bit_mess,Rest,Module_process),
 		maps:merge(Result_process,Map_Init).
 		
-
 
 %%for processing the message given the bitmap and the binary containing the data elements
 -spec process_data_element(binary(),binary(),atom())->map().
@@ -118,20 +116,17 @@ pack(Message_Map,Module_process)->
 		fun(Field_key,Acc={Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
-					Value_bit = erlang:integer_to_binary(0,2),
-					New_Bitmap = << Bitmap/binary,Value_bit/binary >>,
+					New_Bitmap = << Bitmap/binary,0 >>,
 					{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary};
 				Value ->
 					 Check_secondary = Field_key >= 65 andalso Bit_exist_secondary =:= false,
 					 case Check_secondary of 
 							true ->
-								Value_bit = erlang:integer_to_binary(1,2),
-								New_Bitmap = << Value_bit/binary, Bitmap/binary,Value_bit/binary >>,
+								New_Bitmap = << 1:1, Bitmap/binary,1:1 >>,
 								New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
 								{New_Bitmap,true,New_Iso_Fields_Binary};
 							false ->
-								Value_bit = erlang:integer_to_binary(1,2),
-								New_Bitmap = << Bitmap/binary,Value_bit/binary >>,
+								New_Bitmap = << Bitmap/binary,0:1 >>,
 								New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
 								{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary}
 					end
@@ -147,13 +142,37 @@ pack(Message_Map,Module_process)->
 %%it checks if data is of the correct length and type for numbers and simple strings and binaries
 %%%also adds paddings and as well as headers to the various values
 %%not full featured but just enough to make it work
+%%
 -spec format_data(integer()|mti,term(),atom())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Module_process)->
 	{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
+	io:format("~ndata spec is ~p",[{Ftype,Flength,Fx_var_fixed,Fx_header_length}]),
 	case Ftype of
-		n ->  %%iput will be number
-		  Numb_check = erlang:integer_to_binary(Value),
-		  erlang:is_number(n) andalso Flength =< erlang:size(Numb_check) ;
+		n ->  %%input will be number
+			Numb_check = 
+				case {erlang:is_integer(Value),erlang:is_float(Value)} of
+					{true,_}->
+						 erlang:integer_to_binary(Value);
+					{_,true}->
+						erlang:float_to_binary(Value);
+					{_,_}->
+						{error,format_number_wrong}
+				end,
+			Status_check = Flength >= erlang:size(Numb_check),
+			case {Status_check,Fx_var_fixed} of 
+			{true,fx}->
+				io:format("~ndata is ~p",[Numb_check]),
+				Size = erlang:size(Numb_check),
+				Padded_data = pad_data(Numb_check,Flength,<<"0">>),
+				{ok,Padded_data};
+			{true,vl}->
+				Size = erlang:size(Numb_check),
+				Fsize = pad_data(erlang:integer_to_binary(Size),Fx_header_length,<<"0">>),
+				Final_binary = << Fsize/binary,Numb_check/binary>>,
+				{ok,Final_binary};
+			{false,_}->
+				{error,error_length}
+			end;
 		b ->  %%  input will be binary
 			ok;
 		ans -> %% input will be alphnumberic string
@@ -163,6 +182,12 @@ format_data(Key,Value,Module_process)->
 		hex -> %% input will be hexadecimal string
 			ok
 	end.
+
+
+
+%%for padding various fields based on whether its a variable length field or a fixed length field
+
+
 
 
 %% @doc this is for setting a particular field in the message or an mti

@@ -21,7 +21,7 @@ unpack(Mformat,Module_process,IsoMessage)->
 %% @doc for packing messages into iso list format
 -spec pack(Map_pack,Module_process)->list()|{error,term()}when
 	Map_pack ::map(),
-	Module_process  	:: atom.
+	Module_process :: atom.
 pack(Map_pack,Module_process)->
 	iso8583_ascii:pack(Map_pack,Module_process).
 
