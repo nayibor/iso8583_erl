@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/2,set_field/4,get_field/2,pad_data/3]).
+-export([unpack/3,pack/2,set_field/4,get_field/2,pad_data/4]).
 
 -define(MTI_SIZE,4).
 
@@ -158,35 +158,40 @@ format_data(Key,Value,Module_process)->
 					{_,_}->
 						{error,format_number_wrong}
 				end,
-			Status_check = Flength >= erlang:size(Numb_check),
-			case {Status_check,Fx_var_fixed} of 
-			{true,fx}->
-				io:format("~ndata is ~p",[Numb_check]),
-				Size = erlang:size(Numb_check),
-				Padded_data = pad_data(Numb_check,Flength,<<"0">>),
-				{ok,Padded_data};
-			{true,vl}->
-				Size = erlang:size(Numb_check),
-				Fsize = pad_data(erlang:integer_to_binary(Size),Fx_header_length,<<"0">>),
-				Final_binary = << Fsize/binary,Numb_check/binary>>,
-				{ok,Final_binary};
-			{false,_}->
-				{error,error_length}
-			end;
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check);
 		b ->  %%  input will be binary
-			ok;
+			Numb_check = Value,
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check);
 		ans -> %% input will be alphnumberic string
-			ok;
+			Numb_check = erlang:list_to_binary(Value),
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check);
 		ns ->  %% input will be numeric and special character string
-			ok;
+			Numb_check = erlang:list_to_binary(Value),
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check);
 		hex -> %% input will be hexadecimal string
-			ok
+			Numb_check = erlang:list_to_binary(Value),
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check)
 	end.
 
 
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
-
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check)->
+	Status_check = Flength >= erlang:size(Numb_check),
+	case {Status_check,Fx_var_fixed} of 
+	{true,fx}->
+		io:format("~ndata is ~p",[Numb_check]),
+		Size = erlang:size(Numb_check),
+		Padded_data = pad_data(Numb_check,Flength,<<"0">>),
+		{ok,Padded_data};
+	{true,vl}->
+		Size = erlang:size(Numb_check),
+		Fsize = pad_data(erlang:integer_to_binary(Size),Fx_header_length,<<"0">>),
+		Final_binary = << Fsize/binary,Numb_check/binary>>,
+		{ok,Final_binary};
+	{false,_}->
+		{error,error_length}
+	end.
 
 
 
