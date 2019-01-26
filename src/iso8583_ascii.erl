@@ -141,9 +141,10 @@ pack(Message_Map,Module_process)->
 		end,
 		{Bitmap_final,_,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,<<>>},lists:seq(2,128)),
 		Mti = maps:get(mti,Message_Map),
-		Final_payload = << Mti/binary,Bitmap_final/binary,Iso_Fields_Binary/binary >>,
-	    Final_size = size(Final_payload),
-		Final_list = [<<Final_size:?BH>>,Final_payload].
+		Final_mti_bitmap = << Mti/binary,Bitmap_final/binary>>,
+		Fields_list = unicode:characters_to_list(Iso_Fields_Binary,utf8),
+	    Final_size = length(Fields_list)+size(Final_mti_bitmap),
+		Final_list = [<<Final_size:?BH>>,Final_mti_bitmap,Fields_list].
 		
 		
 
@@ -209,7 +210,7 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Binary_char_pad)
 %%this is a special setting for setting the mti of a message
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_mti(Iso_Map,mti,Fld_val,Module_process)->
-		Resp = format_data(0,Fld_val,Module_process),
+		Resp = format_data(1,Fld_val,Module_process),
 		case Resp of
 			{ok,Val} ->
 				New_iso_map = maps:put(mti,Val,Iso_Map),

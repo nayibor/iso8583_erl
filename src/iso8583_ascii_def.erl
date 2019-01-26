@@ -22,6 +22,7 @@
 		} .
 get_spec_field(DataElem)->
 		case DataElem of
+			1	->{n,4,fx,0,<<"Mti">>};
 			2 	->{n,19,vl,2,<<"Pan">>};
 			3 	->{n,6,fx,0,<<"Processing Code">>};
 			4 	->{n,12,fx,0,<<"Amount Transaction">>};
@@ -153,6 +154,7 @@ get_spec_field(DataElem)->
 
 
 %%have to add a function here which returns the various messages and the optional/mandatory fields for each message for this mti type
+%% it will return a list of fields which were not set up well
 
 
 %%have to add a function here also which will work on subfields
