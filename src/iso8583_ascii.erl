@@ -8,10 +8,10 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/2,set_field/4,get_field/2,pad_data/3,process_data_element/3]).
+-export([unpack/3,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/3]).
 
 -define(MTI_SIZE,4).
--define(BH,16).%%%byte header in bits.so a 2 byte header will be 16 at the end of the day
+-define(BH,16).%%%byte header in bits.so a 2 byte header will be 16 bits at the end of the day
 
 %% @doc this is for performing a binary fold kind of like a list fold
 -spec fold_bin(Fun, T, Bin) -> T when
@@ -208,7 +208,7 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Binary_char_pad)
 
 %%this is a special setting for setting the mti of a message
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
-set_field(Iso_Map,mti,Fld_val,Module_process)->
+set_mti(Iso_Map,mti,Fld_val,Module_process)->
 		Resp = format_data(0,Fld_val,Module_process),
 		case Resp of
 			{ok,Val} ->
@@ -216,7 +216,7 @@ set_field(Iso_Map,mti,Fld_val,Module_process)->
 				{ok,New_iso_map};
 			Result = {error,Reason}->
 				Result
-		end;
+		end.
 
 
 %% @doc this is for setting a particular field in the message or an mti
