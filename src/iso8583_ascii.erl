@@ -110,7 +110,7 @@ process_data_element(Bitmap,Data_binary,Module_process)->
 
 %% @doc marshalls a message to be sent.
 %%pack all the differnt elements in a message into
--spec pack(Message_Map::map(),Module_process::atom)->[pos_integer()].
+-spec pack(Message_Map::map(),Module_process::atom)->iolist().
 pack(Message_Map,Module_process)->
 		io:format("message_map is ~p",[Message_Map]),
 		Process_value = 
@@ -143,9 +143,7 @@ pack(Message_Map,Module_process)->
 		Mti = maps:get(mti,Message_Map),
 		Final_payload = << Mti/binary,Bitmap_final/binary,Iso_Fields_Binary/binary >>,
 	    Final_size = size(Final_payload),
-		Final_binary = << Final_size:?BH,Final_payload/binary >>,
-		Final_list = erlang:binary_to_list(Final_binary).
-		%%io:format("~nFinal list is ~p~nlength is ~p~nsize of bin is ~p",[Final_list,length(Final_list),size(Final_binary)]).
+		Final_list = [<<Final_size:?BH>>,Final_payload].
 		
 		
 

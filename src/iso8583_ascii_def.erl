@@ -153,10 +153,6 @@ get_spec_field(DataElem)->
 
 
 %%have to add a function here which returns the various messages and the optional/mandatory fields for each message for this mti type
-%% @doc it will return a list of fields which were not set up well
--spec check_mandatory_fields(Message_Map::map(),Mti::binary())->{error,[pos_integer()]}|ok.
-check_mandatory_fields(Message_Map,Mti)->
-		ok.
 
 
 %%have to add a function here also which will work on subfields
