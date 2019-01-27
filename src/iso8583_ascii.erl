@@ -147,7 +147,7 @@ pack(Message_Map,Module_process)->
 			true ->
 				<< 1,Bitmap_final/binary>>
 		end,
-		io:format("~nbitmap final ~p",[Bitmap_final_bit]),
+		io:format("~nbitmap final ~p~n size is ~p",[Bitmap_final_bit,size(Bitmap_final_bit)]),
 		Bitmap_hex = 
 		fold_bin(
 			fun(<<X:8/binary, Rest_bin/binary>>,Accum_binary) ->
@@ -155,7 +155,9 @@ pack(Message_Map,Module_process)->
 				Concat_First_conv  = lists:concat(First_conv),
 				Concat_First_conv_base = erlang:list_to_integer(Concat_First_conv,2),				
 				Bin_part = erlang:integer_to_binary(Concat_First_conv_base,16),
-				{Rest_bin,<< Accum_binary/binary,Bin_part/binary >>}
+				Bin_part_fn = pad_data(Bin_part,2,<<"0">>),
+				io:format("~n test ~p ~p",[Concat_First_conv,Bin_part_fn]),
+				{Rest_bin,<< Accum_binary/binary,Bin_part_fn/binary >>}
 			end,<<>>,Bitmap_final_bit),
 		Mti = maps:get(mti,Message_Map),
 		Final_mti_bitmap = << Mti/binary,Bitmap_hex/binary>>,
@@ -175,7 +177,6 @@ pack(Message_Map,Module_process)->
 -spec format_data(integer()|mti,term(),atom())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Module_process)->
 	{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
-	io:format("~ndata spec is ~p",[{Ftype,Flength,Fx_var_fixed,Fx_header_length}]),
 	case Ftype of
 		n ->  %%input will be number
 			Numb_check = 
@@ -209,7 +210,6 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Binary_char_pad)
 	Status_check = Flength >= erlang:size(Numb_check),
 	case {Status_check,Fx_var_fixed} of 
 		{true,fx}->
-			io:format("~ndata is ~p",[Numb_check]),
 			Size = erlang:size(Numb_check),
 			Padded_data = pad_data(Numb_check,Flength,Binary_char_pad),
 			{ok,Padded_data};
