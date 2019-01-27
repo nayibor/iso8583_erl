@@ -129,9 +129,9 @@ pack(Message_Map,Module_process)->
 					 Check_secondary = Field_key >= 65 andalso Bit_exist_secondary =:= false,
 					 case Check_secondary of 
 						true ->
-							New_Bitmap = << 1, Bitmap/binary,1 >>,
+							New_Bitmap = << Bitmap/binary,1 >>,
 							New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
-							{New_Bitmap,true,New_Iso_Fields_Binary};
+							{Bitmap,true,New_Iso_Fields_Binary};
 						false ->
 							New_Bitmap = << Bitmap/binary,1>>,
 							New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
@@ -139,9 +139,26 @@ pack(Message_Map,Module_process)->
 					end
 			end
 		end,
-		{Bitmap_final,_,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,<<>>},lists:seq(2,128)),
+		{Bitmap_final,Secondary_bitmap_flag,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,<<>>},lists:seq(2,128)),
+		Bitmap_final_bit =
+		case Secondary_bitmap_flag of
+			false->
+				<< 0,Bitmap_final/binary>>;
+			true ->
+				<< 1,Bitmap_final/binary>>
+		end,
+		io:format("~nbitmap final ~p",[Bitmap_final_bit]),
+		Bitmap_hex = 
+		fold_bin(
+			fun(<<X:8/binary, Rest_bin/binary>>,Accum_binary) ->
+				First_conv = erlang:binary_to_list(X),
+				Concat_First_conv  = lists:concat(First_conv),
+				Concat_First_conv_base = erlang:list_to_integer(Concat_First_conv,2),				
+				Bin_part = erlang:integer_to_binary(Concat_First_conv_base,16),
+				{Rest_bin,<< Accum_binary/binary,Bin_part/binary >>}
+			end,<<>>,Bitmap_final_bit),
 		Mti = maps:get(mti,Message_Map),
-		Final_mti_bitmap = << Mti/binary,Bitmap_final/binary>>,
+		Final_mti_bitmap = << Mti/binary,Bitmap_hex/binary>>,
 		Fields_list = unicode:characters_to_list(Iso_Fields_Binary,utf8),
 	    Final_size = length(Fields_list)+size(Final_mti_bitmap),
 		Final_list = [<<Final_size:?BH>>,Final_mti_bitmap,Fields_list].
