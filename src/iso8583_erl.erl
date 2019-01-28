@@ -11,7 +11,7 @@
 %% @doc for unpacking messages
 
 -spec unpack(Mformat,Module_process,IsoMessage) ->map()|{error,any()} when
-	Mformat  			:: list,
+	Mformat  			:: list|binary,
 	Module_process  	:: atom,
 	IsoMessage			:: [integer()].	
 unpack(Mformat,Module_process,IsoMessage)-> 

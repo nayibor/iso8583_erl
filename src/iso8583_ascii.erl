@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/3]).
+-export([unpack/3,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/3,create_bitmap_final/1]).
 
 -define(MTI_SIZE,4).
 -define(BH,4).%%%byte header in bits.so a 2 byte header will be 16 bits at the end of the day
@@ -103,7 +103,7 @@ process_data_element(Bitmap,Data_binary,Module_process)->
 			    (<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"0">> ->
 					Fld_num_out = Current_index_in + 1,					
 					{Rest_bin,{Data_for_use_in,Index_start_in,Fld_num_out,Map_out_list_in}}
-			end, {Data_binary,0,2,Map_Init},Bitmap),
+			end, {Data_binary,0,1,Map_Init},Bitmap),
 		{_,_,_,Fldata} = OutData,
 		Fldata.
 
@@ -146,6 +146,7 @@ pack(Message_Map,Module_process)->
 			true ->
 				<< 1,Bitmap_final/binary>>
 		end,
+		Bitmap_final_bit_list = create_bitmap_final(Bitmap_final_bit),
 		Mti = maps:get(mti,Message_Map),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		Final_size = 
@@ -158,9 +159,28 @@ pack(Message_Map,Module_process)->
 					end
 				  end,0,Fields_list),
 		%%io:format("~n  Size is~p ~n mti is ~p bitmap is ~p ~n final-list is ~p~n bmp size ~p",[Final_size,Mti,Bitmap_final_bit,Fields_list,size(Bitmap_final_bit)]),
-	    %%Final_size_pad = string:right(erlang:integer_to_list(Final_size),?BH,$0),
-		[Final_size,Mti,Bitmap_final_bit,Fields_list].
+		[Final_size,Mti,Bitmap_final_bit_list,Fields_list].
 		
+
+
+%%for creating the final bitmap
+%%this bitmap is an 8/16 byte binary with each byte being represented  by an integer.
+%%integer converted to a an 2 bit binary represents presence or absence of those fields
+
+-spec create_bitmap_final(binary())->list().
+create_bitmap_final(Bitmap_final_bit)->
+		Bitmap_final_cond = fold_bin(
+			 fun(<<X:8/binary, Rest_bin/binary>>,Bin_list_final) ->
+				List_bin = erlang:binary_to_list(X),
+				List_string = lists:foldr(fun(X,Acc)-> C = erlang:integer_to_list(X),[C|Acc]end,[],List_bin),
+				Lists_string_app = lists:append(List_string),
+				Bitmap_oct = erlang:list_to_integer(Lists_string_app,2),
+			    List_oct = [ erlang:integer_to_list(Bitmap_oct) | Bin_list_final],
+			    {Rest_bin,List_oct}
+		     end,[],Bitmap_final_bit),
+	    List_final_bit = lists:reverse(Bitmap_final_cond).
+	    %%erlang:list_to_binary(List_final_bit).
+
 
 %%this will be used for formatting the data which is sent 
 %%it is done at the setting stage
@@ -201,7 +221,7 @@ format_data(Key,Value,Module_process)->
 -spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()|binary()}.
 pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 	case Type of 
-		string->
+		string ->
 			Status_check = Flength >= erlang:length(Numb_check),
 			case {Status_check,Fx_var_fixed} of 
 					{true,fx}->
