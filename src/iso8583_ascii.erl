@@ -103,7 +103,7 @@ process_data_element(Bitmap,Data_binary,Module_process)->
 			    (<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"0">> ->
 					Fld_num_out = Current_index_in + 1,					
 					{Rest_bin,{Data_for_use_in,Index_start_in,Fld_num_out,Map_out_list_in}}
-			end, {Data_binary,0,2,Map_Init},Bitmap),
+			end, {Data_binary,0,1,Map_Init},Bitmap),
 		{_,_,_,Fldata} = OutData,
 		Fldata.
 
