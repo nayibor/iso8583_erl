@@ -11,7 +11,7 @@
 -export([unpack/3,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/3]).
 
 -define(MTI_SIZE,4).
--define(BH,16).%%%byte header in bits.so a 2 byte header will be 16 bits at the end of the day
+-define(BH,4).%%%byte header in bits.so a 2 byte header will be 16 bits at the end of the day
 
 %% @doc this is for performing a binary fold kind of like a list fold
 -spec fold_bin(Fun, T, Bin) -> T when
@@ -112,7 +112,6 @@ process_data_element(Bitmap,Data_binary,Module_process)->
 %%pack all the differnt elements in a message into
 -spec pack(Message_Map::map(),Module_process::atom)->iolist().
 pack(Message_Map,Module_process)->
-		io:format("message_map is ~p",[Message_Map]),
 		Process_value = 
 		fun(Field_key,Acc={Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
 			case maps:get(Field_key,Message_Map,error) of
@@ -130,16 +129,16 @@ pack(Message_Map,Module_process)->
 					 case Check_secondary of 
 						true ->
 							New_Bitmap = << Bitmap/binary,1 >>,
-							New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
+							New_Iso_Fields_Binary = [Value|Iso_Fields_Binary],
 							{Bitmap,true,New_Iso_Fields_Binary};
 						false ->
 							New_Bitmap = << Bitmap/binary,1>>,
-							New_Iso_Fields_Binary = << Iso_Fields_Binary/binary,Value/binary >>,
+							New_Iso_Fields_Binary = [Value|Iso_Fields_Binary],
 							{New_Bitmap,Bit_exist_secondary,New_Iso_Fields_Binary}
 					end
 			end
 		end,
-		{Bitmap_final,Secondary_bitmap_flag,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,<<>>},lists:seq(2,128)),
+		{Bitmap_final,Secondary_bitmap_flag,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,[]},lists:seq(2,128)),
 		Bitmap_final_bit =
 		case Secondary_bitmap_flag of
 			false->
@@ -147,33 +146,27 @@ pack(Message_Map,Module_process)->
 			true ->
 				<< 1,Bitmap_final/binary>>
 		end,
-		io:format("~nbitmap final ~p~n size is ~p",[Bitmap_final_bit,size(Bitmap_final_bit)]),
-		Bitmap_hex = 
-		fold_bin(
-			fun(<<X:8/binary, Rest_bin/binary>>,Accum_binary) ->
-				First_conv = erlang:binary_to_list(X),
-				Concat_First_conv  = lists:concat(First_conv),
-				Concat_First_conv_base = erlang:list_to_integer(Concat_First_conv,2),				
-				Bin_part = erlang:integer_to_binary(Concat_First_conv_base,16),
-				Bin_part_fn = pad_data(Bin_part,2,<<"0">>),
-				io:format("~n test ~p ~p",[Concat_First_conv,Bin_part_fn]),
-				{Rest_bin,<< Accum_binary/binary,Bin_part_fn/binary >>}
-			end,<<>>,Bitmap_final_bit),
 		Mti = maps:get(mti,Message_Map),
-		Final_mti_bitmap = << Mti/binary,Bitmap_hex/binary>>,
-		Fields_list = unicode:characters_to_list(Iso_Fields_Binary,utf8),
-	    Final_size = length(Fields_list)+size(Final_mti_bitmap),
-		Final_list = [<<Final_size:?BH>>,Final_mti_bitmap,Fields_list].
+		Fields_list = lists:reverse(Iso_Fields_Binary),
+		Final_size = 
+		lists:foldl(fun(X,Acc)->
+					case {is_list(X),is_binary(X)} of
+						{true,_}->
+							Acc+length(X);
+						{_,true}->
+							Acc+size(X)
+					end
+				  end,0,Fields_list),
+		%%io:format("~n  Size is~p ~n mti is ~p bitmap is ~p ~n final-list is ~p~n bmp size ~p",[Final_size,Mti,Bitmap_final_bit,Fields_list,size(Bitmap_final_bit)]),
+	    %%Final_size_pad = string:right(erlang:integer_to_list(Final_size),?BH,$0),
+		[Final_size,Mti,Bitmap_final_bit,Fields_list].
 		
-		
-
 
 %%this will be used for formatting the data which is sent 
 %%it is done at the setting stage
 %%it checks if data is of the correct length and type for numbers and simple strings and binaries
 %%%also adds paddings and as well as headers to the various values
 %%not full featured but just enough to make it work
-%%
 -spec format_data(integer()|mti,term(),atom())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Module_process)->
 	{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
@@ -182,45 +175,70 @@ format_data(Key,Value,Module_process)->
 			Numb_check = 
 				case {erlang:is_integer(Value),erlang:is_float(Value)} of
 					{true,_}->
-						 erlang:integer_to_binary(Value);
+						 erlang:integer_to_list(Value);
 					{_,true}->
-						erlang:float_to_binary(Value);
+						erlang:float_to_list(Value,[{decimals,3},compact]);
 					{_,_}->
 						{error,format_number_wrong}
 				end,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<"0">>);
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
 		b ->  %%  input will be binary
 			Numb_check = Value,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>);
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>,binary);
 		ans -> %% input will be alphnumberic string
-			Numb_check = erlang:list_to_binary(Value),
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>);
+			Numb_check = Value,
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
 		ns ->  %% input will be numeric and special character string
-			Numb_check = erlang:list_to_binary(Value),
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>);
+			Numb_check = Value,
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
 		hex -> %% input will be hexadecimal string
-			Numb_check = erlang:list_to_binary(Value),
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>)
+			Numb_check = Value,
+			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$ ,string)
 	end.
-
 
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Binary_char_pad)->
-	Status_check = Flength >= erlang:size(Numb_check),
-	case {Status_check,Fx_var_fixed} of 
-		{true,fx}->
-			Size = erlang:size(Numb_check),
-			Padded_data = pad_data(Numb_check,Flength,Binary_char_pad),
-			{ok,Padded_data};
-		{true,vl}->
-			Size = erlang:size(Numb_check),
-			Fsize = pad_data(erlang:integer_to_binary(Size),Fx_header_length,Binary_char_pad),
-			Final_binary = << Fsize/binary,Numb_check/binary>>,
-			{ok,Final_binary};
-		{false,_}->
-			{error,error_length}
+-spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()|binary()}.
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
+	case Type of 
+		string->
+			Status_check = Flength >= erlang:length(Numb_check),
+			case {Status_check,Fx_var_fixed} of 
+					{true,fx}->
+						Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
+						{ok,Padded_data};
+					{true,vl}->
+								Size = erlang:length(Numb_check),
+								Fsize = pad_data_string_binary(string,erlang:integer_to_list(Size),Fx_header_length,Char_pad),
+								Final_string = lists:append(Fsize,Numb_check),
+								{ok,Final_string};
+				{false,_}->
+						{error,error_length}
+			end;
+		binary ->
+			Status_check = Flength >= erlang:size(Numb_check),
+			case {Status_check,Fx_var_fixed} of 
+					{true,fx}->
+						Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
+						{ok,Padded_data};
+					{true,vl}->
+							Size =  erlang:size(Numb_check),
+							Fsize = pad_data_string_binary(binary,Size,Fx_header_length,Char_pad),
+							Final_binary = << Fsize/binary,Numb_check/binary>>,
+							{ok,Final_binary};
+				{false,_}->
+						{error,error_length}
+			end
 	end.
+
+
+-spec pad_data_string_binary(string,binary()|list(),integer(),char()|atom()|binary())->{ok,list()|binary()}.
+pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
+	string:right(Numb_check,Flength,Binary_char_pad);
+
+
+pad_data_string_binary(Type,Numb_check,Flength,Binary_char_pad)->
+	pad_data(Numb_check,Flength,Binary_char_pad).
 
 
 
