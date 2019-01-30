@@ -8,7 +8,7 @@
 -module(iso8583_ascii_def).
 
 %%for exporting functions for getting the various fields
--export([get_spec_field/1]).
+-export([get_spec_field/1,get_bitmap_type/0]).
 
 
 %% @doc this part gets the specifications for a particular field  for postillion messages
@@ -20,6 +20,10 @@
 			Headerlength::pos_integer(),
 			FieldName::binary()
 		} .
+		
+get_bitmap_type()->
+		hex.
+
 get_spec_field(DataElem)->
 		case DataElem of
 			1	->{n,4,fx,0,<<"Mti">>};
