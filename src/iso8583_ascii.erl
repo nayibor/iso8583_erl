@@ -8,10 +8,9 @@
 
 -module(iso8583_ascii).
 
--export([unpack/3,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/3]).
+-export([unpack/2,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3]).
 
 -define(MTI_SIZE,4).
--define(BH,4).%%%byte header in bits.so a 2 byte header will be 16 bits at the end of the day
 
 %% @doc this is for performing a binary fold kind of like a list fold
 -spec fold_bin(Fun, T, Bin) -> T when
@@ -52,8 +51,8 @@ convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
 %% it also accepts a module which will be used for getting the specifications for the message
 %% exceptions can be thrown here if the string for the message hasnt been formatted well but they should be caught in whichever code is calling the system 
 %%the data is first converted into a binary before the processing is done . much faster and uses less memory than using lists
--spec unpack(list,atom(),list())->map().
-unpack(list,Module_process,Rest)-> 
+-spec unpack(list(),atom())->map().
+unpack(Rest,Module_process)-> 
 		Bin_message = erlang:list_to_binary(Rest),
 		process_binary(Bin_message,Module_process).
 
@@ -63,36 +62,37 @@ unpack(list,Module_process,Rest)->
 %%all data needed to calculate bitmamp should be part of input to this function 
 -spec process_binary(binary(),atom())->map().
 process_binary(Bin_message,Module_process)->
-		<<One_dig/integer>> = binary_part(Bin_message,4,1),
-		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
-							<<"0">> -> 8;
-							<<"1">> -> 16
-				  end,		
-		<<Mti:?MTI_SIZE/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
-		Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One/integer>> <= Bitmap_Segment >>,
+		Bitmap_type = Module_process:get_bitmap_type(),
+		{Mti,Bit_mess,Bitmap_Segment,Rest} = get_bitmap_subs(Bitmap_type,Bin_message,Module_process),
+		<<Primary_Secondary_bit:1/binary,Real_bitmap/binary>>=Bit_mess,
 		Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
 		Map_Init = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
-		Result_process = process_data_element(Bit_mess,Rest,Module_process),
+		%%io:format("~n bit size is ~p binary  is ~p",[Bitmap_Segment,Bit_mess]),
+		Result_process = process_data_element(Real_bitmap,2,Rest,Module_process),
 		maps:merge(Result_process,Map_Init).
-		
+
 
 %%for processing the message given the bitmap and the binary containing the data elements
--spec process_data_element(binary(),binary(),atom())->map().
-process_data_element(Bitmap,Data_binary,Module_process)->
+-spec process_data_element(binary(),integer(),binary(),atom())->map().
+process_data_element(Bitmap,Index_start,Data_binary,Module_process)->
 		Map_Init = maps:new(),
+		%%%io:format("~nwhole data is~p",[Data_binary]),
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
-					{_,Flength,Fx_var_fixed,Fx_header_length,_} = Module_process:get_spec_field(Current_index_in),
+					{Data_type,Flength,Fx_var_fixed,Fx_header_length,_} = Module_process:get_spec_field(Current_index_in),
+					%%io:format("~nindex1 index2~p ~p~nCurrent Map~p",[Index_start_in,Current_index_in,Map_out_list_in]),
 					Data_index = case Fx_var_fixed of
 						fx -> 
-							Data_element_fx = binary:part(Data_for_use_in,Index_start_in,Flength),
-							New_Index_fx = Index_start_in+Flength,
-							{Data_element_fx,New_Index_fx};
+							Data_element_fx_raw = binary:part(Data_for_use_in,Index_start_in,Flength),
+							Data_element_vl = get_data_element(Data_element_fx_raw,Data_type),
+							New_Index_vl = Index_start_in+Flength,
+							{Data_element_vl,New_Index_vl};
 						vl ->
 							Header = binary:part(Data_for_use_in,Index_start_in,Fx_header_length),
 							Header_value = erlang:binary_to_integer(Header),
 							Start_val = Index_start_in + Fx_header_length,
-							Data_element_vl = binary:part(Data_for_use_in,Start_val,Header_value),
+							Data_element_vl_raw = binary:part(Data_for_use_in,Start_val,Header_value),
+							Data_element_vl = get_data_element(Data_element_vl_raw,Data_type),
 							New_Index_vl = Start_val+Header_value,
 							{Data_element_vl,New_Index_vl}
 								end, 
@@ -103,10 +103,42 @@ process_data_element(Bitmap,Data_binary,Module_process)->
 			    (<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"0">> ->
 					Fld_num_out = Current_index_in + 1,					
 					{Rest_bin,{Data_for_use_in,Index_start_in,Fld_num_out,Map_out_list_in}}
+<<<<<<< HEAD
 			end, {Data_binary,0,1,Map_Init},Bitmap),
+=======
+			end, {Data_binary,0,Index_start,Map_Init},Bitmap),
+>>>>>>> develop
 		{_,_,_,Fldata} = OutData,
 		Fldata.
 
+
+%%for deriving native value of unpacked data
+-spec get_data_element(binary(),atom())->number()|list()|binary().
+get_data_element(Data_value,Type)->
+	case Type of
+		n->
+			
+			bin_to_num(Data_value);
+		b->
+			Data_value;
+		ans->
+			erlang:binary_to_list(Data_value);
+		ns->
+			erlang:binary_to_list(Data_value);
+		hex->
+			erlang:binary_to_list(Data_value)
+	end.
+
+
+
+%%for converting a number to a float or an integer based on input 
+-spec bin_to_num(binary())->float()|integer().
+bin_to_num(Bin) ->
+    N = binary_to_list(Bin),
+    case string:to_float(N) of
+        {error,no_float} -> list_to_integer(N);
+        {F,_Rest} -> F
+    end.
 
 %% @doc marshalls a message to be sent.
 %%pack all the differnt elements in a message into
@@ -146,21 +178,64 @@ pack(Message_Map,Module_process)->
 			true ->
 				<< 1,Bitmap_final/binary>>
 		end,
+		Bitmap_final_bit_list = create_bitmap(Module_process:get_bitmap_type(),Bitmap_final_bit),
 		Mti = maps:get(mti,Message_Map),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		Final_size = 
 		lists:foldl(fun(X,Acc)->
-					case {is_list(X),is_binary(X)} of
-						{true,_}->
-							Acc+length(X);
-						{_,true}->
-							Acc+size(X)
-					end
-				  end,0,Fields_list),
-		%%io:format("~n  Size is~p ~n mti is ~p bitmap is ~p ~n final-list is ~p~n bmp size ~p",[Final_size,Mti,Bitmap_final_bit,Fields_list,size(Bitmap_final_bit)]),
-	    %%Final_size_pad = string:right(erlang:integer_to_list(Final_size),?BH,$0),
-		[Final_size,Mti,Bitmap_final_bit,Fields_list].
-		
+			case {is_list(X),is_binary(X)} of
+				{true,_}->
+					Acc+length(X);
+				{_,true}->
+					Acc+size(X)
+			end
+		  end,0,Fields_list),
+		[Final_size,Mti,Bitmap_final_bit_list,Fields_list].
+	
+
+%% @doc forr getting the bitmap,mti,Data fields 
+%%get_bitmap_subs(atom(),binary(),atom())-> tuple().
+get_bitmap_subs(binary,Bin_message,Module_process)->
+		{_,Flength,_,_,_} = Module_process:get_spec_field(1),
+		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
+		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
+							<<"0">> -> 8;
+							<<"1">> -> 16
+				  end,		
+		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
+		Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One>> <= Bitmap_Segment >>,
+		{Mti,Bit_mess,Bitmap_Segment,Rest}.
+
+
+%%for creating the final bitmap
+%%this bitmap is an 8/16 byte binary with each byte being represented  by an integer.
+%%integer converted to a an 2 bit binary represents presence or absence of those fields
+-spec create_bitmap(binary|hex,binary())->binary()|list().
+create_bitmap(binary,Bitmap_final_bit)->
+		Bitmap_final_cond = fold_bin(
+			 fun(<<X:8/binary, Rest_bin/binary>>,Bin_list_final) ->
+				List_bin = erlang:binary_to_list(X),
+				List_string = lists:foldr(fun(X,Acc)-> C = erlang:integer_to_list(X),[C|Acc]end,[],List_bin),
+				Lists_string_app = lists:append(List_string),
+				Bitmap_oct = erlang:list_to_integer(Lists_string_app,2),
+			    List_oct =  << Bin_list_final/binary,Bitmap_oct/integer  >>,
+			    {Rest_bin,List_oct}
+		     end,<<>>,Bitmap_final_bit);
+
+
+%%this is for creating a hexadecimal bitmap
+create_bitmap(hex,Bitmap_final_bit)->
+		Bitmap_hex = 
+		fold_bin(
+			fun(<<X:8/binary, Rest_bin/binary>>,Accum_list) ->
+				First_conv = erlang:binary_to_list(X),
+				Concat_First_conv  = lists:concat(First_conv),
+				Concat_First_conv_base = erlang:list_to_integer(Concat_First_conv,2),				
+				List_part = erlang:integer_to_list(Concat_First_conv_base,16),
+				{Rest_bin, [List_part | Accum_list]}
+			end,[],Bitmap_final_bit),
+		lists:reverse(Bitmap_hex).
+
 
 %%this will be used for formatting the data which is sent 
 %%it is done at the setting stage
@@ -198,10 +273,10 @@ format_data(Key,Value,Module_process)->
 
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
--spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()|binary()}.
+-spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
 pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 	case Type of 
-		string->
+		string ->
 			Status_check = Flength >= erlang:length(Numb_check),
 			case {Status_check,Fx_var_fixed} of 
 					{true,fx}->
@@ -212,7 +287,7 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 								Fsize = pad_data_string_binary(string,erlang:integer_to_list(Size),Fx_header_length,Char_pad),
 								Final_string = lists:append(Fsize,Numb_check),
 								{ok,Final_string};
-				{false,_}->
+					{false,_}->
 						{error,error_length}
 			end;
 		binary ->
@@ -226,7 +301,7 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 							Fsize = pad_data_string_binary(binary,Size,Fx_header_length,Char_pad),
 							Final_binary = << Fsize/binary,Numb_check/binary>>,
 							{ok,Final_binary};
-				{false,_}->
+					{false,_}->
 						{error,error_length}
 			end
 	end.
@@ -239,7 +314,6 @@ pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
 
 pad_data_string_binary(Type,Numb_check,Flength,Binary_char_pad)->
 	pad_data(Numb_check,Flength,Binary_char_pad).
-
 
 
 %%this is a special setting for setting the mti of a message
