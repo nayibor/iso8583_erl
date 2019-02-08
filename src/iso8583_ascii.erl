@@ -63,10 +63,9 @@ unpack(Rest,Module_process)->
 process_binary(Bin_message,Module_process)->
 		Bitmap_type = Module_process:get_bitmap_type(),
 		{Mti,Bit_mess,Bitmap_Segment,Rest} = get_bitmap_subs(Bitmap_type,Bin_message,Module_process),
-		<<Primary_Secondary_bit:1/binary,Real_bitmap/binary>>=Bit_mess,
+		<<_:1/binary,Real_bitmap/binary>> = Bit_mess,
 		Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
 		Map_Init = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
-		%%io:format("~n bit size is ~p binary  is ~p",[Bitmap_Segment,Bit_mess]),
 		Result_process = process_data_element(Real_bitmap,2,Rest,Module_process),
 		maps:merge(Result_process,Map_Init).
 
@@ -75,11 +74,9 @@ process_binary(Bin_message,Module_process)->
 -spec process_data_element(binary(),integer(),binary(),atom())->map().
 process_data_element(Bitmap,Index_start,Data_binary,Module_process)->
 		Map_Init = maps:new(),
-		%%%io:format("~nwhole data is~p",[Data_binary]),
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
 					{Data_type,Flength,Fx_var_fixed,Fx_header_length,_} = Module_process:get_spec_field(Current_index_in),
-					%%io:format("~nindex1 index2~p ~p~nCurrent Map~p",[Index_start_in,Current_index_in,Map_out_list_in]),
 					Data_index = case Fx_var_fixed of
 						fx -> 
 							Data_element_fx_raw = binary:part(Data_for_use_in,Index_start_in,Flength),
@@ -140,7 +137,7 @@ bin_to_num(Bin) ->
 -spec pack(Message_Map::map(),Module_process::atom)->iolist().
 pack(Message_Map,Module_process)->
 		Process_value = 
-		fun(Field_key,Acc={Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
+		fun(Field_key,{Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
 					Check_secondary = Field_key =< 64,
@@ -155,7 +152,7 @@ pack(Message_Map,Module_process)->
 					 Check_secondary = Field_key >= 65 andalso Bit_exist_secondary =:= false,
 					 case Check_secondary of 
 						true ->
-							New_Bitmap = << Bitmap/binary,1 >>,
+							_ = << Bitmap/binary,1 >>,
 							New_Iso_Fields_Binary = [Value|Iso_Fields_Binary],
 							{Bitmap,true,New_Iso_Fields_Binary};
 						false ->
@@ -180,7 +177,7 @@ pack(Message_Map,Module_process)->
 
 
 %% @doc forr getting the bitmap,mti,Data fields 
-%%get_bitmap_subs(atom(),binary(),atom())-> tuple().
+-spec get_bitmap_subs(atom(),binary(),atom())-> tuple().
 get_bitmap_subs(binary,Bin_message,Module_process)->
 		{_,Flength,_,_,_} = Module_process:get_spec_field(1),
 		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
@@ -197,8 +194,8 @@ get_bitmap_subs(hex,Bin_message,Module_process)->
 		{_,Flength,_,_,_} = Module_process:get_spec_field(1),
 		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
 		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
-							<<"0">> -> 32;
-							<<"1">> -> 64
+							<<"0">> -> 16;
+							<<"1">> -> 32
 				  end,	
 		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
 		Bit_mess = fold_bin(
@@ -217,10 +214,10 @@ get_bitmap_subs(hex,Bin_message,Module_process)->
 %%integer converted to a an 2 bit binary represents presence or absence of those fields
 -spec create_bitmap(binary|hex,binary())->binary()|list().
 create_bitmap(binary,Bitmap_final_bit)->
-		Bitmap_final_cond = fold_bin(
+		fold_bin(
 			 fun(<<X:8/binary, Rest_bin/binary>>,Bin_list_final) ->
 				List_bin = erlang:binary_to_list(X),
-				List_string = lists:foldr(fun(X,Acc)-> C = erlang:integer_to_list(X),[C|Acc]end,[],List_bin),
+				List_string = lists:foldr(fun(X_fold,Acc)-> C = erlang:integer_to_list(X_fold),[C|Acc]end,[],List_bin),
 				Lists_string_app = lists:append(List_string),
 				Bitmap_oct = erlang:list_to_integer(Lists_string_app,2),
 			    List_oct =  << Bin_list_final/binary,Bitmap_oct/integer  >>,
@@ -228,7 +225,7 @@ create_bitmap(binary,Bitmap_final_bit)->
 		     end,<<>>,Bitmap_final_bit);
 
 
-%%this is for creating a hexadecimal bitmap
+%%this is for creating a hexadecimal bitmap  
 create_bitmap(hex,Bitmap_final_bit)->
 		Bitmap_hex = 
 		fold_bin(
@@ -317,19 +314,19 @@ pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
 	string:right(Numb_check,Flength,Binary_char_pad);
 
 
-pad_data_string_binary(Type,Numb_check,Flength,Binary_char_pad)->
+pad_data_string_binary(_Type,Numb_check,Flength,Binary_char_pad)->
 	pad_data(Numb_check,Flength,Binary_char_pad).
 
 
 %%this is a special setting for setting the mti of a message
--spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
+-spec set_mti(Iso_Map::map(),mti ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_mti(Iso_Map,mti,Fld_val,Module_process)->
 		Resp = format_data(1,Fld_val,Module_process),
 		case Resp of
 			{ok,Val} ->
 				New_iso_map = maps:put(mti,Val,Iso_Map),
 				{ok,New_iso_map};
-			Result = {error,Reason}->
+			Result = {error,_Reason}->
 				Result
 		end.
 
@@ -337,13 +334,14 @@ set_mti(Iso_Map,mti,Fld_val,Module_process)->
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_field(Iso_Map,Fld_num,Fld_val,Module_process)->
 		Resp = format_data(Fld_num,Fld_val,Module_process),
 		case Resp of
 			{ok,Val} ->
 				New_iso_map = maps:put(Fld_num,Val,Iso_Map),
 				{ok,New_iso_map};
-			Result = {error,Reason}->
+			Result = {error,_Reason}->
 				Result
 		end.
 
