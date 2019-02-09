@@ -20,7 +20,9 @@
 			Headerlength::pos_integer(),
 			FieldName::binary()
 		} .
-		
+
+
+-spec get_bitmap_type()->binary|hex.	
 get_bitmap_type()->
 		binary.
 
