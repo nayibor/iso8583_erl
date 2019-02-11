@@ -309,12 +309,12 @@ pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 	end.
 
 
--spec pad_data_string_binary(string,binary()|list(),integer(),char()|atom()|binary())->{ok,list()|binary()}.
+-spec pad_data_string_binary('string'|'binary',binary()|string(),non_neg_integer(),char()|atom()|binary())->{ok,string()|binary()}.
 pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
 	string:right(Numb_check,Flength,Binary_char_pad);
 
 
-pad_data_string_binary(_Type,Numb_check,Flength,Binary_char_pad)->
+pad_data_string_binary(binary,Numb_check,Flength,Binary_char_pad)->
 	pad_data(Numb_check,Flength,Binary_char_pad).
 
 

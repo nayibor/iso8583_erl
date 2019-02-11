@@ -31,6 +31,9 @@ It then uses those specifications to then pack and unpack iso messages for your 
 {ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,iso8583_ascii_def),
 [Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
 
+
+
+
 %another way to pack data
 {ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),	
 Iso_vals = [{3,201234},{4,4.5},{5,5000}],
@@ -42,14 +45,25 @@ Map_send_list = lists:foldl(
 [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,iso8583_ascii_def).
 
 
+%%send to receiving interface server after packing 
+%%should have been packed first to get  the following list [Mti,Bitmap_final_bit,Fields_list]
+Size_Bitmap = iso8583_ascii:get_size(bitmap,Bitmap_final_bit),
+Final_size = iso8583_ascii:get_size(field_list,Fields_list),
+Final_length = length(Mti)+Size_Bitmap+Final_size,
+%% zero padded to a 2 byte header
+Final_size_pad = string:right(erlang:integer_to_list(Final_length),?2,$0),
+Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
+%%send to interface
+ok = gen_tcp:send(Socket,Send_list_final),
+ok = inet:setopts(Socket, [{active, once}]).
+
+
 %unpack data
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),
-{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,iso8583_ascii_def),
-{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5,iso8583_ascii_def),
-{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,iso8583_ascii_def),
-[Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
-Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
-Result = iso8583_erl:unpack(Final_fields,iso8583_ascii_def).
+Message = "02003800000000000000201234123456789012123456789012",
+Result = iso8583_erl:unpack(Message,iso8583_ascii_def).
+io:format("Result is ~p",[Result]).
+Result is #{3 => 201234,4 => 123456789012,5 => 123456789012,
+		<<"bit">> => <<"3800000000000000">>,<<"mti">> => <<"0200">>}
 ```
 
 

@@ -2,12 +2,12 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -export([init_per_suite/1,end_per_suite/1,init_per_testcase/2,end_per_testcase/2,all/0]).
--export([pack_data/1,set_field/1,unpack_data/1,set_field/1,process_data_element/1,create_bitmap/1,get_bitmap_subs/1]).
+-export([pack_data/1,set_field/1,unpack_data/1,set_field/1,process_data_element/1,create_bitmap_binary/1,create_bitmap_hex/1,create_bitmap_spec/1,get_bitmap_subs/1]).
 
 %%common test definitions for the usermod functions
 %%testing whether istill dey happen
 
-all() -> [pack_data,set_field,unpack_data,set_field,process_data_element,create_bitmap,get_bitmap_subs].
+all() -> [pack_data,set_field,unpack_data,set_field,process_data_element,create_bitmap_binary,create_bitmap_hex,create_bitmap_spec,get_bitmap_subs].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -59,6 +59,7 @@ unpack_data(_Config)->
 	{ok,Fourth_map} = 	iso8583_erl:set_field(Third_map,5,123456789012,iso8583_ascii_def),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
 	Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
+	ct:pal("message is ~p",[Final_fields]),
 	Result = iso8583_erl:unpack(Final_fields,iso8583_ascii_def).
 
 
@@ -70,12 +71,25 @@ process_data_element(_Config)->
 	
 
 
-create_bitmap(_Config)->
+create_bitmap_binary(_Config)->
 	%%for creating a  binary bitmap based on the a  binary containing 0/1 showing presence or absence of fields
 	Module_process = iso8583_ascii_def,
-	<<56,0,0,0,0,0,0,0>> = iso8583_erl:create_bitmap(Module_process:get_bitmap_type(),
+	<<56,0,0,0,0,0,0,0>> = iso8583_erl:create_bitmap(binary,
 	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 
+
+create_bitmap_hex(_Config)->
+	%%for creating a  hex bitmap based on the a  binary containing 0/1 showing presence or absence of fields
+	Module_process = iso8583_ascii_def,
+	"3800000000000000" = iso8583_erl:create_bitmap(hex,
+	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
+
+
+create_bitmap_spec(_Config)->
+	%%for creating a  bitmap based on specification
+	Module_process = iso8583_ascii_def,
+	"3800000000000000" = iso8583_erl:create_bitmap(Module_process:get_bitmap_type(),
+	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 
 	
 get_bitmap_subs(_Config)->
