@@ -24,7 +24,7 @@
 
 -spec get_bitmap_type()->binary|hex.	
 get_bitmap_type()->
-		binary.
+		hex.
 
 get_spec_field(DataElem)->
 		case DataElem of
