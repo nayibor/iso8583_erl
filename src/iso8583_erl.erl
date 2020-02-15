@@ -3,10 +3,11 @@
 %% API exports
 -export([unpack/2,pack/2,get_size/2,set_field/4,set_mti/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3]).
 
-
 %%====================================================================
 %% API functions
 %%====================================================================
+
+
 
 
 %% @doc for packing messages into iso list format
@@ -44,6 +45,7 @@ set_field(Iso_Map,Fld_num,Fld_val,Module_process)->
 -spec set_mti(Iso_Map::map(),Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_mti(Iso_Map,Mti_val,Module_process)->
 	iso8583_ascii:set_mti(Iso_Map,mti,Mti_val,Module_process).
+	
 
 
 %% @doc for processing the message given the bitmap and the binary containing the data elements
@@ -58,6 +60,7 @@ process_data_element(Bitmap,Index_start,Data_binary,Module_process)->
 -spec create_bitmap(binary|hex,binary())->binary()|list().
 create_bitmap(Type_bitmap,Bitmap_final_bit)->
 	iso8583_ascii:create_bitmap(Type_bitmap,Bitmap_final_bit).
+
 
 
 %% @doc forr getting the bitmap,mti,Data fields 
