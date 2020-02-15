@@ -26,6 +26,7 @@
 get_bitmap_type()->
 		hex.
 
+
 get_spec_field(DataElem)->
 		case DataElem of
 			1	->{n,4,fx,0,<<"Mti">>};
@@ -164,4 +165,8 @@ get_spec_field(DataElem)->
 
 
 %%have to add a function here also which will work on subfields
-%%will have to show you the spec for the various subfields which will aid in their processing
+%%will have to show you the spec for the various subfields for a specific field number which will aid in their processing
+
+
+%%have to add function which validates data being sent,received
+
