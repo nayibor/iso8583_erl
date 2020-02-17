@@ -133,41 +133,29 @@ bin_to_num(Bin) ->
 
 
 %% @doc marshalls a message to be sent.
-%%pack all the differnt elements in a message into
--spec pack(Message_Map::map(),Module_process::atom)->iolist().
+%%pack all the differnt elements in a message into an iolist
+-spec pack(Message_Map::map(),Module_process::atom())->iolist().
 pack(Message_Map,Module_process)->
 		Process_value = 
-		fun(Field_key,{Bitmap,Bit_exist_secondary,Iso_Fields_Binary})->
+		fun(Field_key,{Bitmap,Iso_Fields})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
-					Check_secondary = Field_key =< 64,
-					case Check_secondary of
-						true ->
-							New_Bitmap = << Bitmap/binary,0 >>,
-							{New_Bitmap,Bit_exist_secondary,Iso_Fields_Binary};
-						false ->
-							{Bitmap,Bit_exist_secondary,Iso_Fields_Binary}
-					end;
+					New_Bitmap = << Bitmap/binary,0 >>,
+					{New_Bitmap,Iso_Fields};
 				Value ->
-					 Check_secondary = Field_key >= 65 andalso Bit_exist_secondary =:= false,
-					 case Check_secondary of 
-						true ->
-							_ = << Bitmap/binary,1 >>,
-							New_Iso_Fields_Binary = [Value|Iso_Fields_Binary],
-							{Bitmap,true,New_Iso_Fields_Binary};
-						false ->
-							New_Bitmap = << Bitmap/binary,1>>,
-							New_Iso_Fields_Binary = [Value|Iso_Fields_Binary],
-							{New_Bitmap,Bit_exist_secondary,New_Iso_Fields_Binary}
-					end
+					New_Bitmap = << Bitmap/binary,1>>,
+					New_Iso_Fields = [Value|Iso_Fields],
+					{New_Bitmap,New_Iso_Fields}
 			end
 		end,
-		{Bitmap_final,Secondary_bitmap_flag,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,false,[]},lists:seq(2,128)),
-		Bitmap_final_bit =
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,[]},lists:seq(2,128)),
+		Pred = fun(Key,Value) -> is_integer(Key) andalso (Key >= 65)  end,
+		Secondary_bitmap_flag = maps:filter(Pred,Message_Map),
+		Bitmap_final_bit = 
 		case Secondary_bitmap_flag of
-			false->
+			#{}->
 				<< 0,Bitmap_final/binary>>;
-			true ->
+			_ ->
 				<< 1,Bitmap_final/binary>>
 		end,
 		Bitmap_final_bit_list = create_bitmap(Module_process:get_bitmap_type(),Bitmap_final_bit),

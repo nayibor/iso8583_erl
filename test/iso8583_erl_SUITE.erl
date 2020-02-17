@@ -39,10 +39,13 @@ pack_data(_Config) ->
 	{ok,Second_map} = 	iso8583_erl:set_field(First_map,3,201234,iso8583_ascii_def),
 	{ok,Third_map} = 	iso8583_erl:set_field(Second_map,4,4.5,iso8583_ascii_def),
 	{ok,Fourth_map} = 	iso8583_erl:set_field(Third_map,5,5000,iso8583_ascii_def),
-	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
+	{ok,Fifth_map} = 	iso8583_erl:set_field(Fourth_map,102,"123413243",iso8583_ascii_def),
+	{ok,Six_map} = 	iso8583_erl:set_field(Fifth_map,103,"12897979987",iso8583_ascii_def),
+	Result = [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,iso8583_ascii_def),
+	ct:pal("result is ~p",[Result]),
 	%another way to pack data
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),	
-	Iso_vals = [{3,201234},{4,4.5},{5,5000}],
+	Iso_vals = [{3,201234},{4,4.5},{5,5000},{102,"123413243"},{103,"12897979987"}],
 	Map_send_list = lists:foldl(
 		fun({Key,Value},Acc)->
 			{ok,Map_new_Accum} = iso8583_erl:set_field(Acc,Key,Value,iso8583_ascii_def),
