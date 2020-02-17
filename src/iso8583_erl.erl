@@ -66,7 +66,7 @@ create_bitmap(Type_bitmap,Bitmap_final_bit)->
 %% @doc forr getting the bitmap,mti,Data fields 
 -spec get_bitmap_subs(atom(),binary(),atom())-> tuple().
 get_bitmap_subs(Binary_type,Bin_message,Module_process)->
-	iso8583_ascii:get_bitmap_subs(binary,Bin_message,Module_process).
+	iso8583_ascii:get_bitmap_subs(Binary_type,Bin_message,Module_process).
 %%====================================================================
 %% Internal functions
 %%====================================================================

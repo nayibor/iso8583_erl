@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/2,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2]).
+-export([unpack/2,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2,convert_base_pad/3]).
 
 
 %% @doc this is for performing a binary fold kind of like a list fold
@@ -149,7 +149,7 @@ pack(Message_Map,Module_process)->
 			end
 		end,
 		{Bitmap_final,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,[]},lists:seq(2,128)),
-		Pred = fun(Key,Value) -> is_integer(Key) andalso (Key >= 65)  end,
+		Pred = fun(Key,_) -> is_integer(Key) andalso (Key >= 65)  end,
 		Secondary_bitmap_flag = maps:filter(Pred,Message_Map),
 		Bitmap_final_bit = 
 		case Secondary_bitmap_flag of
@@ -180,11 +180,13 @@ get_bitmap_subs(binary,Bin_message,Module_process)->
 
 get_bitmap_subs(hex,Bin_message,Module_process)->
 		{_,Flength,_,_,_} = Module_process:get_spec_field(1),
-		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
-		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
-							<<"0">> -> 16;
-							<<"1">> -> 32
-				  end,	
+		One_dig = binary_part(Bin_message,Flength,1),
+		Size_base_ten = erlang:binary_to_integer(One_dig,16),
+		Bitsize =
+			case  Size_base_ten =< 7 of
+				true -> 16;
+				false -> 32
+			end,
 		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
 		Bit_mess = fold_bin(
 			 fun(<<X:2/binary, Rest_bin/binary>>,Bin_list_final) ->
@@ -365,4 +367,4 @@ get_size(field_list,Fields_list)->
 				Acc+size(X)
 		end
 	  end,0,Fields_list).
-	
+

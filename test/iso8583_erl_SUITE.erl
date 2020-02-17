@@ -2,12 +2,11 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -export([init_per_suite/1,end_per_suite/1,init_per_testcase/2,end_per_testcase/2,all/0]).
--export([pack_data/1,set_field/1,unpack_data/1,set_field/1,process_data_element/1,create_bitmap_binary/1,create_bitmap_hex/1,create_bitmap_spec/1,get_bitmap_subs/1]).
+-export([pack_data/1,set_field/1,unpack_data/1,unpack_data_secodary_bitmap_message/1,unpack_data_primary_bitmap_message/1,set_field/1,process_data_element/1,create_bitmap_binary/1,create_bitmap_hex/1,create_bitmap_spec/1,get_bitmap_subs/1]).
 
-%%common test definitions for the usermod functions
-%%testing whether istill dey happen
 
-all() -> [pack_data,set_field,unpack_data,set_field,process_data_element,create_bitmap_binary,create_bitmap_hex,create_bitmap_spec,get_bitmap_subs].
+
+all() -> [pack_data,set_field,unpack_data,unpack_data_secodary_bitmap_message,unpack_data_primary_bitmap_message,set_field,process_data_element,create_bitmap_binary,create_bitmap_hex,create_bitmap_spec,get_bitmap_subs].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -18,7 +17,6 @@ end_per_suite(_Config) ->
     application:stop(iso8583_erl).
 
 init_per_testcase(_, Config) ->
-	io:format("starting iso8583_erl tests"),
     Config.
 
 	
@@ -42,7 +40,6 @@ pack_data(_Config) ->
 	{ok,Fifth_map} = 	iso8583_erl:set_field(Fourth_map,102,"123413243",iso8583_ascii_def),
 	{ok,Six_map} = 	iso8583_erl:set_field(Fifth_map,103,"12897979987",iso8583_ascii_def),
 	Result = [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,iso8583_ascii_def),
-	ct:pal("result is ~p",[Result]),
 	%another way to pack data
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),	
 	Iso_vals = [{3,201234},{4,4.5},{5,5000},{102,"123413243"},{103,"12897979987"}],
@@ -54,6 +51,9 @@ pack_data(_Config) ->
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,iso8583_ascii_def).
 
 
+pack_data_2(_Config)->
+	ok.
+
 unpack_data(_Config)->
 	%%pack the data first
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),
@@ -62,10 +62,27 @@ unpack_data(_Config)->
 	{ok,Fourth_map} = 	iso8583_erl:set_field(Third_map,5,123456789012,iso8583_ascii_def),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
 	Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
-	ct:pal("message is ~p",[Final_fields]),
 	Result = iso8583_erl:unpack(Final_fields,iso8583_ascii_def).
 
 
+unpack_data_secodary_bitmap_message(_Config)->
+	Result = 
+	 #{2 => 1231231312,4 => 1000.5,7 => 1107221800,11 => 1,
+	  12 => 200217,18 => 1234,19 => 233,20 => 233,39 => "00",
+	  40 => 100,41 => "EBS00001",101 => "test_file.civ",
+	  102 => "1111111111",103 => "00101010101001",
+	  <<"bit">> => <<"D230700003800000000000000E000000">>,
+	  <<"mti">> => <<"0200">>},
+	Result = iso8583_erl:unpack(
+	"0200D230700003800000000000000E0000001012312313120000001000.51107221800000001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001",iso8583_ascii_def).
+
+unpack_data_primary_bitmap_message(_Config)->
+	Result = 
+	  #{2 => 1231231312,4 => 1000.5,7 => 1107221800,11 => 1,
+	  12 => 200217,18 => 1234,19 => 233,20 => 233,39 => "00",
+	  40 => 100,41 => "EBS00001",
+	  <<"bit">> => <<"5230700003800000">>,<<"mti">> => <<"0200">>},
+	Result = iso8583_erl:unpack("020052307000038000001012312313120000001000.51107221800000001200217123423323300100EBS00001",iso8583_ascii_def).
 process_data_element(_Config)->
 	%%for processing an item given an binary showing presence or absence of fields
 	%%,the index to start from from the spec file in a sequential manner  and the specification file
@@ -89,7 +106,7 @@ create_bitmap_hex(_Config)->
 
 
 create_bitmap_spec(_Config)->
-	%%for creating a  bitmap based on specification
+	%%for creating a  hex bitmap based on module specification
 	Module_process = iso8583_ascii_def,
 	"3800000000000000" = iso8583_erl:create_bitmap(Module_process:get_bitmap_type(),
 	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
