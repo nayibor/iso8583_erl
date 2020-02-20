@@ -45,10 +45,17 @@ Map_send_list = lists:foldl(
 [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,iso8583_ascii_def).
 
 
+%%third way to pack data
+Iso_vals_new = [{mti,0200},{3,201234},{4,4.5},{5,5000}],
+Map_send_list = iso8583_erl:set_field_list(Iso_vals_new,iso8583_ascii_def),
+
+
+
+
 %%send to receiving interface server after packing 
 %%should have been packed first to get  the following list [Mti,Bitmap_final_bit,Fields_list]
-Size_Bitmap = iso8583_ascii:get_size(bitmap,Bitmap_final_bit),
-Final_size = iso8583_ascii:get_size(field_list,Fields_list),
+Size_Bitmap = iso8583_erl:get_size(bitmap,Bitmap_final_bit),
+Final_size = iso8583_erl:get_size(field_list,Fields_list),
 Final_length = length(Mti)+Size_Bitmap+Final_size,
 %% zero padded to a 2 byte header
 Final_size_pad = string:right(erlang:integer_to_list(Final_length),?2,$0),

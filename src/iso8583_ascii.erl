@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/2,pack/2,set_field/4,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2,convert_base_pad/3]).
+-export([unpack/2,pack/2,set_field/4,set_field_list/2,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2,convert_base_pad/3]).
 
 
 %% @doc this is for performing a binary fold kind of like a list fold
@@ -64,8 +64,8 @@ process_binary(Bin_message,Module_process)->
 		Bitmap_type = Module_process:get_bitmap_type(),
 		{Mti,Bit_mess,Bitmap_Segment,Rest} = get_bitmap_subs(Bitmap_type,Bin_message,Module_process),
 		<<_:1/binary,Real_bitmap/binary>> = Bit_mess,
-		Mti_map = maps:put(<<"mti">>,Mti,maps:new()),
-		Map_Init = maps:put(<<"bit">>,Bitmap_Segment,Mti_map),
+		Mti_map = maps:put(mti,Mti,maps:new()),
+		Map_Init = maps:put(bit,Bitmap_Segment,Mti_map),
 		Result_process = process_data_element(Real_bitmap,2,Rest,Module_process),
 		maps:merge(Result_process,Map_Init).
 
@@ -107,29 +107,29 @@ process_data_element(Bitmap,Index_start,Data_binary,Module_process)->
 %%for deriving native value of unpacked data
 -spec get_data_element(binary(),atom())->number()|list()|binary().
 get_data_element(Data_value,Type)->
-	case Type of
-		n->
-			
-			bin_to_num(Data_value);
-		b->
-			Data_value;
-		ans->
-			erlang:binary_to_list(Data_value);
-		ns->
-			erlang:binary_to_list(Data_value);
-		hex->
-			erlang:binary_to_list(Data_value)
-	end.
+		case Type of
+			n->
+				
+				bin_to_num(Data_value);
+			b->
+				Data_value;
+			ans->
+				erlang:binary_to_list(Data_value);
+			ns->
+				erlang:binary_to_list(Data_value);
+			hex->
+				erlang:binary_to_list(Data_value)
+		end.
 
 
 %%for converting a number to a float or an integer based on input 
 -spec bin_to_num(binary())->float()|integer().
 bin_to_num(Bin) ->
-    N = binary_to_list(Bin),
-    case string:to_float(N) of
-        {error,no_float} -> list_to_integer(N);
-        {F,_Rest} -> F
-    end.
+	    N = binary_to_list(Bin),
+	    case string:to_float(N) of
+	        {error,no_float} -> list_to_integer(N);
+	        {F,_Rest} -> F
+	    end.
 
 
 %% @doc marshalls a message to be sent.
@@ -149,11 +149,11 @@ pack(Message_Map,Module_process)->
 			end
 		end,
 		{Bitmap_final,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,[]},lists:seq(2,128)),
-		Pred = fun(Key,_) -> is_integer(Key) andalso (Key >= 65)  end,
+		Pred = fun(Key,_) -> erlang:is_integer(Key) andalso (Key >= 65)  andalso (Key =< 128)  end,
 		Secondary_bitmap_flag = maps:filter(Pred,Message_Map),
 		Bitmap_final_bit = 
-		case Secondary_bitmap_flag of
-			#{}->
+		case erlang:map_size(Secondary_bitmap_flag) of
+			0->
 				<< 0,Bitmap_final/binary>>;
 			_ ->
 				<< 1,Bitmap_final/binary>>
@@ -164,7 +164,7 @@ pack(Message_Map,Module_process)->
 		[Mti,Bitmap_final_bit_list,Fields_list].
 
 
-%% @doc forr getting the bitmap,mti,Data fields 
+%% @doc for getting the bitmap,mti,Data fields 
 -spec get_bitmap_subs(atom(),binary(),atom())-> tuple().
 get_bitmap_subs(binary,Bin_message,Module_process)->
 		{_,Flength,_,_,_} = Module_process:get_spec_field(1),
@@ -236,126 +236,147 @@ create_bitmap(hex,Bitmap_final_bit)->
 %%not full featured but just enough to make it work
 -spec format_data(integer()|mti,term(),atom())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Module_process)->
-	{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
-	case Ftype of
-		n ->  %%input will be number
-			Numb_check = 
-				case {erlang:is_integer(Value),erlang:is_float(Value)} of
-					{true,_}->
-						 erlang:integer_to_list(Value);
-					{_,true}->
-						erlang:float_to_list(Value,[{decimals,3},compact]);
-					{_,_}->
-						{error,format_number_wrong}
-				end,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-		b ->  %%  input will be binary
-			Numb_check = Value,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>,binary);
-		ans -> %% input will be alphnumberic string
-			Numb_check = Value,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-		ns ->  %% input will be numeric and special character string
-			Numb_check = Value,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-		hex -> %% input will be hexadecimal string
-			Numb_check = Value,
-			pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$ ,string)
-	end.
+		{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = Module_process:get_spec_field(Key),
+		case Ftype of
+			n ->  %%input will be number
+				Numb_check = 
+					case {erlang:is_integer(Value),erlang:is_float(Value)} of
+						{true,_}->
+							 erlang:integer_to_list(Value);
+						{_,true}->
+							erlang:float_to_list(Value,[{decimals,5},compact]);
+						{_,_}->
+							{error,format_number_wrong}
+					end,
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
+			b ->  %%  input will be binary
+				Numb_check = Value,
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>,binary);
+			ans -> %% input will be alphnumberic string
+				Numb_check = Value,
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			ns ->  %% input will be numeric and special character string
+				Numb_check = Value,
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			hex -> %% input will be hexadecimal string
+				Numb_check = Value,
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$ ,string)
+		end.
 
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
 -spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
 pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
-	case Type of 
-		string ->
-			Status_check = Flength >= erlang:length(Numb_check),
-			case {Status_check,Fx_var_fixed} of 
-					{true,fx}->
-						Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
-						{ok,Padded_data};
-					{true,vl}->
-								Size = erlang:length(Numb_check),
-								Fsize = pad_data_string_binary(string,erlang:integer_to_list(Size),Fx_header_length,Char_pad),
-								Final_string = lists:append(Fsize,Numb_check),
-								{ok,Final_string};
-					{false,_}->
-						{error,error_length}
-			end;
-		binary ->
-			Status_check = Flength >= erlang:size(Numb_check),
-			case {Status_check,Fx_var_fixed} of 
-					{true,fx}->
-						Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
-						{ok,Padded_data};
-					{true,vl}->
-							Size =  erlang:size(Numb_check),
-							Fsize = pad_data_string_binary(binary,Size,Fx_header_length,Char_pad),
-							Final_binary = << Fsize/binary,Numb_check/binary>>,
-							{ok,Final_binary};
-					{false,_}->
-						{error,error_length}
-			end
-	end.
+		case Type of 
+			string ->
+				Status_check = erlang:length(Numb_check) =< Flength ,
+				case {Status_check,Fx_var_fixed} of 
+						{true,fx}->
+							Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
+							{ok,Padded_data};
+						{true,vl}->
+									Size = erlang:length(Numb_check),
+									Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
+									Final_string = lists:append([Fsize,Numb_check]),
+									{ok,Final_string};
+						{false,_}->
+							{error,error_length}
+				end;
+			binary ->
+				Status_check = erlang:size(Numb_check) =< Flength ,
+				case {Status_check,Fx_var_fixed} of 
+						{true,fx}->
+							Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
+							{ok,Padded_data};
+						{true,vl}->
+								Size =  erlang:size(Numb_check),
+								Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
+								Final_binary = [Fsize,<<Numb_check/binary>>],
+								{ok,Final_binary};
+						{false,_}->
+							{error,error_length}
+				end
+		end.
 
 
--spec pad_data_string_binary('string'|'binary',binary()|string(),non_neg_integer(),char()|atom()|binary())->{ok,string()|binary()}.
+%%for padding a string or a binary up to a certain length with one string character or binary character
+-spec pad_data_string_binary('string'|'binary',binary()|string(),non_neg_integer(),char()|<<_:8>>)->{ok,string()|binary()}.
 pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
-	string:right(Numb_check,Flength,Binary_char_pad);
+		string:right(Numb_check,Flength,Binary_char_pad);
 
 
 pad_data_string_binary(binary,Numb_check,Flength,Binary_char_pad)->
-	pad_data(Numb_check,Flength,Binary_char_pad).
+		pad_data(Numb_check,Flength,Binary_char_pad).
 
+
+
+%%accepts response of formatting of iso field and then  updates iso map if result is good
+-spec format_create_map(integer()|mti,{ok,term()}|{error,term()},map())->{ok,map()}|{error,term()}.
+format_create_map(Key,Resp,Old_iso_map)->
+		case Resp of
+			{ok,Val} ->
+				New_iso_map = maps:put(Key,Val,Old_iso_map),
+				{ok,New_iso_map};
+			Result = {error,_}->
+				Result
+		end.
 
 %%this is a special setting for setting the mti of a message
 -spec set_mti(Iso_Map::map(),mti ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_mti(Iso_Map,mti,Fld_val,Module_process)->
 		Resp = format_data(1,Fld_val,Module_process),
-		case Resp of
-			{ok,Val} ->
-				New_iso_map = maps:put(mti,Val,Iso_Map),
-				{ok,New_iso_map};
-			Result = {error,_Reason}->
-				Result
-		end.
+		format_create_map(mti,Resp,Iso_Map).
 
 
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_field(Iso_Map,Fld_num,Fld_val,Module_process)->
-		Resp = format_data(Fld_num,Fld_val,Module_process),
-		case Resp of
-			{ok,Val} ->
-				New_iso_map = maps:put(Fld_num,Val,Iso_Map),
-				{ok,New_iso_map};
-			Result = {error,_Reason}->
-				Result
+		case Fld_num of 
+			mti ->
+				Resp = format_data(1,Fld_val,Module_process),	
+				format_create_map(mti,Resp,Iso_Map);
+			_ ->					
+				Resp = format_data(Fld_num,Fld_val,Module_process),
+				format_create_map(Fld_num,Resp,Iso_Map)
 		end.
+
+
+%%this is for accepting a list containing the various fields and then creating an creating an output map 
+%%which can be fed into the pack function
+%%it can also also throw an exception if input data was of the wrong format for an individual field
+-spec set_field_list(List::list(),Module_process::atom())->map().
+set_field_list(List,Module_process)->
+		First_map = maps:new(),
+		lists:foldl(
+		fun({Key,Value},Acc)->
+			{ok,Map_new_Accum} = set_field(Acc,Key,Value,Module_process),
+			Map_new_Accum
+		end,First_map,List).
 
 
 %% @doc this is for getting a particular field in an iso message back
 -spec get_field(Fld_num::pos_integer()|binary(),Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->
-	Val_field = maps:get(Fld_num,Iso_Map,error),
-	case Val_field of
-		error ->
-			error;
-		_ ->
-			{ok,Val_field}
-	end.
+		Val_field = maps:get(Fld_num,Iso_Map,error),
+		case Val_field of
+			error ->
+				error;
+			_ ->
+				{ok,Val_field}
+		end.
 
 
 %%for calculating size of bitmap or field list
+-spec get_size(bitmap:atom(),binary()|list())->integer().
 get_size(bitmap,Bitmap)->
-	case {is_list(Bitmap),is_binary(Bitmap)} of 
-		{true,_}->
-			length(Bitmap);
-		{_,true}->
-			size(Bitmap)
-	end;
+		case {is_list(Bitmap),is_binary(Bitmap)} of 
+			{true,_}->
+				length(Bitmap);
+			{_,true}->
+				size(Bitmap)
+		end;
 
 
 get_size(field_list,Fields_list)->

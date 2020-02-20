@@ -1,7 +1,7 @@
 -module(iso8583_erl).
 
 %% API exports
--export([unpack/2,pack/2,get_size/2,set_field/4,set_mti/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3]).
+-export([unpack/2,pack/2,get_size/2,set_field/4,set_field_list/2,set_mti/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3]).
 
 %%====================================================================
 %% API functions
@@ -39,7 +39,13 @@ get_size(Type,Value)->
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
 set_field(Iso_Map,Fld_num,Fld_val,Module_process)->
 	iso8583_ascii:set_field(Iso_Map,Fld_num,Fld_val,Module_process).
-	
+
+
+%%  @doc for setting the fields but accepts a list of fields and returns a map containing output
+-spec set_field_list(List::list(),Module_process::atom())->map().
+set_field_list(List,Module_process)->
+	iso8583_ascii:set_field_list(List,Module_process).
+
 
 %%  @doc for setting the fields for an iso message
 -spec set_mti(Iso_Map::map(),Fld_val::term(),Module_process::atom)->{ok,map()}|{error,term()}.
