@@ -167,7 +167,8 @@ pack_message(secondary,Message_Map,Module_process)->
 
 
 %%used for setting the bitmap fields for each field based on whether the key exists or not
--spec pack_check_keys(maps:iterator()|map())->tuple().
+%%returns anonymous  function which is used for setting up the bitmap
+-spec pack_check_keys(maps:iterator()|map())->fun().
 pack_check_keys(Message_Map)->
 		fun(Field_key,{Bitmap,Iso_Fields})->
 			case maps:get(Field_key,Message_Map,error) of
