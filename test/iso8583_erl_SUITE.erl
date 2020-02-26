@@ -9,7 +9,7 @@
 all() -> [pack_data,set_field,unpack_data,unpack_data_secodary_bitmap_message,unpack_data_primary_bitmap_message,process_data_element,create_bitmap_binary,create_bitmap_hex,create_bitmap_spec,get_bitmap_subs,pack_data_2].
 
 init_per_suite(Config) ->
-    ok = application:start(iso8583_erl),
+    ok = application:ensure_started(iso8583_erl),
     Config.
 
 end_per_suite(_Config) ->
@@ -18,7 +18,6 @@ end_per_suite(_Config) ->
 init_per_testcase(_, Config) ->
     Config.
 
-	
 end_per_testcase(_, _Config) ->
     ok.
 
@@ -59,7 +58,9 @@ unpack_data(_Config)->
 	{ok,Fourth_map} = 	iso8583_erl:set_field(Third_map,5,123456789012,iso8583_ascii_def),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
 	Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
-	Result = iso8583_erl:unpack(Final_fields,iso8583_ascii_def).
+	Map_data = #{3 => 201234,4 => 123456789012,5 => 123456789012,
+    bit => <<"3800000000000000">>,mti => <<"0200">>},
+	?assertEqual(true,Map_data =:= iso8583_erl:unpack(Final_fields,iso8583_ascii_def)).
 
 
 unpack_data_secodary_bitmap_message(_Config)->

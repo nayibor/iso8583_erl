@@ -136,7 +136,39 @@ bin_to_num(Bin) ->
 %%pack all the differnt elements in a message into an iolist
 -spec pack(Message_Map::map(),Module_process::atom())->iolist().
 pack(Message_Map,Module_process)->
-		Process_value = 
+		Pred = fun(Key,_) -> erlang:is_integer(Key) andalso (Key >= 65)  andalso (Key =< 128)  end,
+		Secondary_bitmap_flag = maps:filter(Pred,Message_Map),
+		case erlang:map_size(Secondary_bitmap_flag) of
+			0->
+				pack_message(primary,Message_Map,Module_process);
+			_ ->
+				pack_message(secondary,Message_Map,Module_process)
+		end.
+
+
+%%creates a primary/secondary bitmap out of message map and processing module
+-spec pack_message(primary|secondary,map(),atom())->iolist().
+pack_message(primary,Message_Map,Module_process)-> 
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,64)),
+		Bitmap_final_bit = << 0,Bitmap_final/binary>>,
+		Bitmap_final_bit_list = create_bitmap(Module_process:get_bitmap_type(),Bitmap_final_bit),
+		Mti = maps:get(mti,Message_Map),
+		Fields_list = lists:reverse(Iso_Fields_Binary),
+		[Mti,Bitmap_final_bit_list,Fields_list];
+
+
+pack_message(secondary,Message_Map,Module_process)-> 
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,128)),
+		Bitmap_final_bit = << 1,Bitmap_final/binary>>,
+		Bitmap_final_bit_list = create_bitmap(Module_process:get_bitmap_type(),Bitmap_final_bit),
+		Mti = maps:get(mti,Message_Map),
+		Fields_list = lists:reverse(Iso_Fields_Binary),
+		[Mti,Bitmap_final_bit_list,Fields_list].
+
+
+%%used for setting the bitmap fields for each field based on whether the key exists or not
+-spec pack_check_keys(maps:iterator()|map())->tuple().
+pack_check_keys(Message_Map)->
 		fun(Field_key,{Bitmap,Iso_Fields})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
@@ -147,21 +179,7 @@ pack(Message_Map,Module_process)->
 					New_Iso_Fields = [Value|Iso_Fields],
 					{New_Bitmap,New_Iso_Fields}
 			end
-		end,
-		{Bitmap_final,Iso_Fields_Binary} = lists:foldl(Process_value,{<<>>,[]},lists:seq(2,128)),
-		Pred = fun(Key,_) -> erlang:is_integer(Key) andalso (Key >= 65)  andalso (Key =< 128)  end,
-		Secondary_bitmap_flag = maps:filter(Pred,Message_Map),
-		Bitmap_final_bit = 
-		case erlang:map_size(Secondary_bitmap_flag) of
-			0->
-				<< 0,Bitmap_final/binary>>;
-			_ ->
-				<< 1,Bitmap_final/binary>>
-		end,
-		Bitmap_final_bit_list = create_bitmap(Module_process:get_bitmap_type(),Bitmap_final_bit),
-		Mti = maps:get(mti,Message_Map),
-		Fields_list = lists:reverse(Iso_Fields_Binary),
-		[Mti,Bitmap_final_bit_list,Fields_list].
+		end.
 
 
 %% @doc for getting the bitmap,mti,Data fields 
@@ -392,7 +410,8 @@ get_size(field_list,Fields_list)->
 
 
 %%for getting the final size of the message to be sent 
--spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
+%%-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
+-spec get_size_send([any()],binary() | [any()],binary() | [any()])->non_neg_integer(). 
 get_size_send(Mti,Bitmap_final_bit,Fields_list)->
 	length(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
 
