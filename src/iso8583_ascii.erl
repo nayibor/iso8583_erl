@@ -394,5 +394,5 @@ get_size(field_list,Fields_list)->
 %%for getting the final size of the message to be sent 
 -spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
 get_size_send(Mti,Bitmap_final_bit,Fields_list)->
-	size(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
+	length(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
 
