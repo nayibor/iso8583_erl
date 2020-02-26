@@ -58,7 +58,6 @@ Size_Bitmap = iso8583_erl:get_size(bitmap,Bitmap_final_bit),
 Final_size = iso8583_erl:get_size(field_list,Fields_list),
 Final_length = length(Mti)+Size_Bitmap+Final_size,
 %% zero padded to a 2 byte header
-Final_size_pad = string:right(erlang:integer_to_list(Final_length),?2,$0),
 Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
 %%send to interface
 ok = gen_tcp:send(Socket,Send_list_final),
