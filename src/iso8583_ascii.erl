@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/2,pack/2,set_field/4,set_field_list/2,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2,convert_base_pad/3]).
+-export([unpack/2,pack/2,set_field/4,set_field_list/2,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/3]).
 
 
 %% @doc this is for performing a binary fold kind of like a list fold
@@ -389,4 +389,10 @@ get_size(field_list,Fields_list)->
 				Acc+size(X)
 		end
 	  end,0,Fields_list).
+
+
+%%for getting the final size of the message to be sent 
+-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
+get_size_send(Mti,Bitmap_final_bit,Fields_list)->
+	size(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
 

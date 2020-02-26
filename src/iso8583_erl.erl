@@ -1,7 +1,7 @@
 -module(iso8583_erl).
 
 %% API exports
--export([unpack/2,pack/2,get_size/2,set_field/4,set_field_list/2,set_mti/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3]).
+-export([unpack/2,pack/2,get_size/2,set_field/4,set_field_list/2,set_mti/3,process_data_element/4,create_bitmap/2,get_bitmap_subs/3,get_size_send/3]).
 
 %%====================================================================
 %% API functions
@@ -73,6 +73,13 @@ create_bitmap(Type_bitmap,Bitmap_final_bit)->
 -spec get_bitmap_subs(atom(),binary(),atom())-> tuple().
 get_bitmap_subs(Binary_type,Bin_message,Module_process)->
 	iso8583_ascii:get_bitmap_subs(Binary_type,Bin_message,Module_process).
+
+
+
+%%for getting the final size of the message to be sent 
+-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
+get_size_send(Mti,Bitmap_final_bit,Fields_list)->
+	iso8583_ascii:get_size_send(Mti,Bitmap_final_bit,Fields_list).
 %%====================================================================
 %% Internal functions
 %%====================================================================
