@@ -54,9 +54,7 @@ Map_send_list = iso8583_erl:set_field_list(Iso_vals_new,iso8583_ascii_def),
 
 %%send to receiving interface server after packing 
 %%should have been packed first to get  the following list [Mti,Bitmap_final_bit,Fields_list]
-Size_Bitmap = iso8583_erl:get_size(bitmap,Bitmap_final_bit),
-Final_size = iso8583_erl:get_size(field_list,Fields_list),
-Final_length = length(Mti)+Size_Bitmap+Final_size,
+Final_length = iso8583_ascii:get_size_send(Mti,Bitmap_final_bit,Fields_list),
 %% zero padded to a 2 byte header
 Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
 %%send to interface
