@@ -5,7 +5,7 @@ An erlang library for processing iso8583 messages inspired by [erl8583],[jpos li
 
 This is a minimalist library for  packing and unpacking iso8583 financial messages.
 
-It accepts a module which contains specification information about fields,mti,bitmap  for your interchange.
+It accepts a specification file which contains information about fields,mti,bitmap  for your interchange.
 
 It then uses those specifications to then pack and unpack iso messages for your interchange.
 
@@ -17,37 +17,38 @@ It then uses those specifications to then pack and unpack iso messages for your 
 ```erlang
 
 %set mti
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),
+Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
 
 
 %set field
-{ok,First_map} = iso8583_erl:set_field(maps:new(),3,201234,iso8583_ascii_def),
+{ok,Second_map} = 	iso8583_erl:set_field(First_map,3,201234,Specification),
 
 
 %pack_data
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),
-{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,iso8583_ascii_def),
-{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5,iso8583_ascii_def),
-{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,iso8583_ascii_def),
-[Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,iso8583_ascii_def),
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
+{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
+{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5,Specification),
+{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,Specification),
+[Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,Specification),
 
 
 
 
 %another way to pack data
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,iso8583_ascii_def),	
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),	
 Iso_vals = [{3,201234},{4,4.5},{5,5000}],
 Map_send_list = lists:foldl(
 	fun({Key,Value},Acc)->
-		{ok,Map_new_Accum} = iso8583_erl:set_field(Acc,Key,Value,iso8583_ascii_def),
+		{ok,Map_new_Accum} = iso8583_erl:set_field(Acc,Key,Value,Specification),
 		Map_new_Accum
 	end,First_map,Iso_vals),
-[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,iso8583_ascii_def).
+[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification).
 
 
 %%third way to pack data
 Iso_vals_new = [{mti,0200},{3,201234},{4,4.5},{5,5000}],
-Map_send_list = iso8583_erl:set_field_list(Iso_vals_new,iso8583_ascii_def),
+Map_send_list = iso8583_erl:set_field_list(Iso_vals_new,Specification),
 
 
 
