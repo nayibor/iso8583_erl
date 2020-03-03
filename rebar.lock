@@ -1,1 +1,4 @@
-[].
+[{<<"swab">>,
+  {git,"https://github.com/crownedgrouse/swab.git",
+       {ref,"88d6d7772ec9a8979b45297436c7523683e9089b"}},
+  0}].
