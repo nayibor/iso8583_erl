@@ -22,7 +22,7 @@ Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/cus
 
 
 %set field
-{ok,Second_map} = 	iso8583_erl:set_field(First_map,3,201234,Specification),
+{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
 
 
 %pack_data
@@ -65,63 +65,14 @@ ok = inet:setopts(Socket, [{active, once}]).
 
 %unpack data
 Message = "02003800000000000000201234123456789012123456789012",
-Result = iso8583_erl:unpack(Message,iso8583_ascii_def).
+Result = iso8583_erl:unpack(Message,Specification).
 io:format("Result is ~p",[Result]).
 Result is #{3 => 201234,4 => 123456789012,5 => 123456789012,
 		<<"bit">> => <<"3800000000000000">>,<<"mti">> => <<"0200">>}
 ```
 
 
-
-
-
-## exports ##
-
-iso8583_erl exports the following functions
-
-```erlang
-
-set_mti/3
-for setting the mti
-
-
-set_field/3
-for setting the field
-
-
-unpack/2
-for unpacking iso8583 messages
-
-
-pack/2
-for packing iso8583 messages
-
-
-get_size/2
-for getting the size of an iso8583 message list or bitmap
-
-
-set_field/4
-for setting the field
-
-
-set_mti/3
-for setting the mti
-
-
-process_data_element/4
-for processing an item given an binary showing presence or absence of fields
-
-
-create_bitmap/2
-for creating the bitmap
-
-
-get_bitmap_subs/3
-for getting the mti,bitmap,iso message and other elements from an iso message
-
-
-```
+more examples of usage can be found in  ```test/iso8583_erl_SUITE.erl```
 
 
 ## acknowledgements ##
