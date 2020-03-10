@@ -28,7 +28,7 @@ set_field(_Config)->
 	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012,Specification),
 	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,Specification),
-	?assertEqual(true,#{3 => "201234",4 => "123456789012",5 => "000000005000",mti => "0200"} =:= Fourth_map).
+	?assertEqual(true,#{3 => 201234,4 => 123456789012,5 => 5000,mti => 200} =:= Fourth_map).
 	
 pack_data(_Config) ->
 	%%one way to pack data

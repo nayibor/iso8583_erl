@@ -190,27 +190,27 @@ pack(Message_Map,Specification)->
 %%creates a primary/secondary bitmap out of message map and specification
 -spec pack_message(primary|secondary,map(),map())->iolist().
 pack_message(primary,Message_Map,Specification)-> 
-		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,64)),
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map,Specification)) ,{<<>>,[]},lists:seq(2,64)),
 		Bitmap_final_bit = << 0,Bitmap_final/binary>>,
 		Bitmap_final_bit_list = create_bitmap(get_bitmap_type(Specification),Bitmap_final_bit),
-		Mti = maps:get(mti,Message_Map),
+		{ok,Mti} = format_data(1,maps:get(mti,Message_Map),Specification),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		[Mti,Bitmap_final_bit_list,Fields_list];
 
 
 pack_message(secondary,Message_Map,Specification)-> 
-		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,128)),
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map,Specification)) ,{<<>>,[]},lists:seq(2,128)),
 		Bitmap_final_bit = << 1,Bitmap_final/binary>>,
 		Bitmap_final_bit_list = create_bitmap(get_bitmap_type(Specification),Bitmap_final_bit),
-		Mti = maps:get(mti,Message_Map),
+		{ok,Mti} = format_data(1,maps:get(mti,Message_Map),Specification),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		[Mti,Bitmap_final_bit_list,Fields_list].
 
 
 %%used for setting the bitmap fields for each field based on whether the key exists or not
 %%returns anonymous  function which is used for setting up the bitmap
--spec pack_check_keys(maps:iterator()|map())->fun().
-pack_check_keys(Message_Map)->
+-spec pack_check_keys(maps:iterator()|map(),maps:iterator()|map())->fun().
+pack_check_keys(Message_Map,Specification)->
 		fun(Field_key,{Bitmap,Iso_Fields})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
@@ -218,7 +218,8 @@ pack_check_keys(Message_Map)->
 					{New_Bitmap,Iso_Fields};
 				Value ->
 					New_Bitmap = << Bitmap/binary,1>>,
-					New_Iso_Fields = [Value|Iso_Fields],
+					{ok,Actual_value} = format_data(Field_key,Value,Specification),
+					New_Iso_Fields = [Actual_value|Iso_Fields],
 					{New_Bitmap,New_Iso_Fields}
 			end
 		end.
@@ -388,8 +389,7 @@ format_create_map(Key,Resp,Old_iso_map)->
 %%this is a special setting for setting the mti of a message
 -spec set_mti(Iso_Map::map(),mti ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
 set_mti(Iso_Map,mti,Fld_val,Specification)->
-		Resp = format_data(1,Fld_val,Specification),
-		format_create_map(mti,Resp,Iso_Map).
+		format_create_map(mti,{ok,Fld_val},Iso_Map).
 
 
 %% @doc this is for setting a particular field in the message or an mti
@@ -399,11 +399,9 @@ set_mti(Iso_Map,mti,Fld_val,Specification)->
 set_field(Iso_Map,Fld_num,Fld_val,Specification)->
 		case Fld_num of 
 			mti ->
-				Resp = format_data(1,Fld_val,Specification),	
-				format_create_map(mti,Resp,Iso_Map);
+				format_create_map(mti,{ok,Fld_val},Iso_Map);
 			_ ->					
-				Resp = format_data(Fld_num,Fld_val,Specification),
-				format_create_map(Fld_num,Resp,Iso_Map)
+				format_create_map(Fld_num,{ok,Fld_val},Iso_Map)
 		end.
 
 
