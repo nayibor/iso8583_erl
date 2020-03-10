@@ -60,7 +60,7 @@ load_specification(Filename)->
 				bitmap_type->
 					maps:put(bitmap_type,Value,Acc);
 				Number when Number >=1,Number =<128 ->
-					#{code := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,format:=Format} = Value,
+#{data_format := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
 					maps:put(Number,{De_type,Length_field,Fl_vl,Header_length,Format},Acc)
 			end
