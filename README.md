@@ -18,29 +18,29 @@ It then uses those specifications to then pack and unpack iso messages for your 
 
 %set mti
 Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
 
 
 %set field
-{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
+{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
 
 
 %pack_data
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
-{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
-{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5,Specification),
-{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,Specification),
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
+{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
+{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5),
+{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000),
 [Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,Specification),
 
 
 
 
 %another way to pack data
-{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),	
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),	
 Iso_vals = [{3,201234},{4,4.5},{5,5000}],
 Map_send_list = lists:foldl(
 	fun({Key,Value},Acc)->
-		{ok,Map_new_Accum} = iso8583_erl:set_field(Acc,Key,Value,Specification),
+		{ok,Map_new_Accum} = iso8583_erl:set_field(Acc,Key,Value),
 		Map_new_Accum
 	end,First_map,Iso_vals),
 [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification).
@@ -48,13 +48,18 @@ Map_send_list = lists:foldl(
 
 %%third way to pack data
 Iso_vals_new = [{mti,0200},{3,201234},{4,4.5},{5,5000}],
-Map_send_list = iso8583_erl:set_field_list(Iso_vals_new,Specification),
+Map_send_list = iso8583_erl:set_field_list(Iso_vals_new),
 
 
 
 
 %%send to receiving interface server after packing 
 %%should have been packed first to get  the following list [Mti,Bitmap_final_bit,Fields_list]
+{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
+{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
+{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5),
+{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000),
+[Mti,Bitmap_final_bit,Fields_list]  = iso8583_erl:pack(Fourth_map,Specification),
 Final_length = iso8583_ascii:get_size_send(Mti,Bitmap_final_bit,Fields_list),
 %% zero padded to a 2 byte header
 Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
