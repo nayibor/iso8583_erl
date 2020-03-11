@@ -190,6 +190,8 @@ validate_data_sub({Data,Data_type,Flength,Fx_var_fixed,Fx_header_length,Sub_form
 -spec perform_validation(tuple(),list(),list(),non_neg_integer())-> ok | {error,binary()}.
 perform_validation(_Data,"N","N",_Flength)->
 	ok;
+perform_validation(_Data,"N","NF",_Flength)->
+	ok;
 perform_validation(__Data,"N","SN",_Flength)->
 	ok;
 perform_validation(__Data,"N","MMDDhhmmss",_Flength)->
@@ -212,7 +214,7 @@ perform_validation(_Data,"S","S",_Flength)->
 	ok;
 perform_validation(_Data,"B","B",_Flength)->
 	ok;
-perform_validation(Data,_,_,_)->
+perform_validation(_Data,_,_,_)->
 	{error,<<"unknown format">>}.
 
 
