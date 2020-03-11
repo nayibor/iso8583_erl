@@ -162,6 +162,60 @@ get_data_element(Data_value,Type)->
 		end.
 
 
+%% @doc this is for validating an iso8583 message for incoming messages based on a specification
+%% @doc De_type,Length_field,Fl_vl,Header_length,Format
+-spec validate_data(map(),map())->{{ok,map()},{error,list()}}.
+validate_data(Data_map,Specification_map)->
+	Map_fold_iso_function = 
+		fun(Key_iso,Value_iso,Acc_in = {{ok,Map_result},{error,Error_list}})when erlang:is_integer(Key_iso) andalso (Key_iso >= 2)  andalso (Key_iso =< 128)->
+		    {Data_type,Flength,Fx_var_fixed,Fx_header_length,Sub_format} = get_spec_field(Key_iso,Specification_map),
+			Result_validation = validate_data_sub({Value_iso,Data_type,Flength,Fx_var_fixed,Fx_header_length,Sub_format}),
+			case Result_validation of
+				ok ->
+					Final_form = get_data_element(Value_iso,Data_type),
+					New_result_map = maps:put(Key_iso,Final_form,Map_result),
+					{{ok,New_result_map},{error,Error_list}};
+				{error,Result} ->
+					{{ok,Map_result},{error,[{Key_iso,Result}|Error_list]}}
+			end
+		end,		
+	maps:fold(Map_fold_iso_function,{ok,maps:new(),{error,[]}},Data_map).
+
+
+validate_data_sub({Data,Data_type,Flength,Fx_var_fixed,Fx_header_length,Sub_format})->
+	perform_validation(Data,Data_type,Sub_format,Flength).
+
+
+%% @doc for performing validation on each data element 
+-spec perform_validation(tuple(),list(),list(),non_neg_integer())-> ok | {error,binary()}.
+perform_validation(_Data,"N","N",_Flength)->
+	ok;
+perform_validation(__Data,"N","SN",_Flength)->
+	ok;
+perform_validation(__Data,"N","MMDDhhmmss",_Flength)->
+	ok;
+perform_validation(_Data,"N","hhmmss",_Flength)->
+	ok;
+perform_validation(_Data,"N","MMDD",_Flength)->
+	ok;
+perform_validation(_Data,"N","YYMM",_Flength)->
+	ok;
+perform_validation(_Data,"N","YYMMDD",_Flength)->
+	ok;
+perform_validation(_Data,"NS","NS",_Flength)->
+	ok;
+perform_validation(_Data,"ANS","ANS",_Flength)->
+	ok;
+perform_validation(_Data,"AN","AN",_Flength)->
+	ok;
+perform_validation(_Data,"S","S",_Flength)->
+	ok;
+perform_validation(_Data,"B","B",_Flength)->
+	ok;
+perform_validation(Data,_,_,_)->
+	{error,<<"unknown format">>}.
+
+
 %%for converting a number to a float or an integer based on input 
 -spec bin_to_num(binary())->float()|integer().
 bin_to_num(Bin) ->
@@ -304,9 +358,7 @@ format_data(Key,Value,Specification)->
 						{true,_}->
 							 erlang:integer_to_list(Value);
 						{_,true}->
-							erlang:float_to_list(Value,[{decimals,5},compact]);
-						{_,_}->
-							{error,format_number_wrong}
+							erlang:float_to_list(Value,[{decimals,5},compact])
 					end,
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
 			"B" ->  %%  input will be binary
