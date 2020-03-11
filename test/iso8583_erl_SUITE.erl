@@ -8,31 +8,36 @@
 
 all() -> [pack_data,set_field,unpack_data,unpack_data_secodary_bitmap_message,unpack_data_primary_bitmap_message,process_data_element,create_bitmap_binary,create_bitmap_hex,create_bitmap_spec,get_bitmap_subs,pack_data_2].
 
+
 init_per_suite(Config) ->
     ok = application:ensure_started(iso8583_erl),
     Config.
 
-end_per_suite(_Config) ->
+
+end_per_suite(_) ->
     application:stop(iso8583_erl).
 
+
 init_per_testcase(_, Config) ->
-    Config.
+    Spec_path = code:priv_dir(iso8583_erl)++"/custom.cfg",
+    Specification = iso8583_erl:load_specification(Spec_path),
+    [{spec,Specification} | Config].
+
 
 end_per_testcase(_, _Config) ->
     ok.
 
 
 set_field(_Config)->
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
 	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012),
 	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000),
 	?assertEqual(true,#{3 => 201234,4 => 123456789012,5 => 5000,mti => 200} =:= Fourth_map).
 	
-pack_data(_Config) ->
+pack_data(Config) ->
 	%%one way to pack data
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	Specification =?config(spec, Config),
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
 	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5),
@@ -45,17 +50,17 @@ pack_data(_Config) ->
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification).
 
 
-pack_data_2(_Config)->
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+pack_data_2(Config)->
+	Specification =?config(spec, Config),
 	Map_send_list = iso8583_erl:set_field_list([{mti,0200},{2,1231231312},{4,1000.5},{7,1107221800},{11,1},{12,200217},{18,1234},{19,233},
 	{20,233},{39,"00"},{40,100},{41,"EBS00001"},{101,"test_file.civ"},{102,"1111111111"},{103,"00101010101001"}]),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification),
 	Final_1 =  lists:append([Mti,Bitmap_final_bit,lists:append(Fields_list)]),
 	?assertEqual(true,Final_1 =:= "0200D230700003800000000000000E0000001012312313120000001000.51107221800000001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001").
 
-unpack_data(_Config)->
+unpack_data(Config)->
 	%%pack the data first
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	Specification =?config(spec,Config),
 	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
 	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012),
@@ -67,8 +72,8 @@ unpack_data(_Config)->
 	?assertEqual(true,Map_data =:= iso8583_erl:unpack(Final_fields,Specification)).
 
 
-unpack_data_secodary_bitmap_message(_Config)->
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+unpack_data_secodary_bitmap_message(Config)->
+	Specification =?config(spec, Config),
 	Result = 
 	 #{2 => 1231231312,4 => 1000.5,7 => 1107221800,11 => 1,
 	  12 => 200217,18 => 1234,19 => 233,20 => 233,39 => "00",
@@ -78,8 +83,8 @@ unpack_data_secodary_bitmap_message(_Config)->
 	Result = iso8583_erl:unpack(
 	"0200D230700003800000000000000E0000001012312313120000001000.51107221800000001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001",Specification).
 
-unpack_data_primary_bitmap_message(_Config)->
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+unpack_data_primary_bitmap_message(Config)->
+	Specification =?config(spec, Config),
 	Result = 
 	  #{2 => 1231231312,4 => 1000.5,7 => 1107221800,11 => 1,
 	  12 => 200217,18 => 1234,19 => 233,20 => 233,39 => "00",
@@ -88,10 +93,10 @@ unpack_data_primary_bitmap_message(_Config)->
 	Result = iso8583_erl:unpack("020052307000038000001012312313120000001000.51107221800000001200217123423323300100EBS00001",Specification).
 
 
-process_data_element(_Config)->
+process_data_element(Config)->
 	%%for processing an item given an binary showing presence or absence of fields
 	%%,the index to start from from the spec file in a sequential manner  and the specification file
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	Specification =?config(spec, Config),
 	Reponse = iso8583_erl:process_data_element(<<"011100000000000000000000000000000000000000000000000000000000000">>,2,<<"201234123456789012123456789012">>,Specification),
 	?assertEqual(true,#{3 => 201234,4 => 123456789012,5 => 123456789012} =:= Reponse).
 	
@@ -109,16 +114,16 @@ create_bitmap_hex(_Config)->
 	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 
 
-create_bitmap_spec(_Config)->
+create_bitmap_spec(Config)->
 	%%for creating a  hex bitmap based on module specification
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	Specification =?config(spec, Config),
 	"3800000000000000" = iso8583_erl:create_bitmap(iso8583_erl:get_bitmap_type(Specification),
 	<<0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 
 	
-get_bitmap_subs(_Config)->
+get_bitmap_subs(Config)->
 	%%get the mti,the text binary and the integer binary,as well as the text fields converted to a binary
-	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	Specification =?config(spec, Config),
 	{Mti,Text_Binary,Integer_binary,Binary_fields} = {<<"0200">>,<<"0011100000000000000000000000000000000000000000000000000000000000">>,
 	<<56,0,0,0,0,0,0,0>>,<<"201234123456789012123456789012">>},
 	Response = 
