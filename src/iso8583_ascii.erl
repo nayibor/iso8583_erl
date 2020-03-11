@@ -148,7 +148,6 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 get_data_element(Data_value,Type)->
 		case Type of
 			"N"->
-				
 				bin_to_num(Data_value);
 			"B"->
 				Data_value;
@@ -333,32 +332,26 @@ format_data(Key,Value,Specification)->
 pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 		case Type of 
 			string ->
-				Status_check = erlang:length(Numb_check) =< Flength ,
-				case {Status_check,Fx_var_fixed} of 
-						{true,fx}->
+				case Fx_var_fixed of 
+						fx->
 							Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
 							{ok,Padded_data};
-						{true,vl}->
-									Size = erlang:length(Numb_check),
-									Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
-									Final_string = lists:append([Fsize,Numb_check]),
-									{ok,Final_string};
-						{false,_}->
-							{error,error_length}
+						vl->
+							Size = erlang:length(Numb_check),
+							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
+							Final_string = lists:append([Fsize,Numb_check]),
+							{ok,Final_string}
 				end;
 			binary ->
-				Status_check = erlang:size(Numb_check) =< Flength ,
-				case {Status_check,Fx_var_fixed} of 
-						{true,fx}->
+				case Fx_var_fixed of 
+						fx->
 							Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
 							{ok,Padded_data};
-						{true,vl}->
-								Size =  erlang:size(Numb_check),
-								Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-								Final_binary = [Fsize,<<Numb_check/binary>>],
-								{ok,Final_binary};
-						{false,_}->
-							{error,error_length}
+						vl->
+							Size =  erlang:size(Numb_check),
+							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
+							Final_binary = [Fsize,<<Numb_check/binary>>],
+							{ok,Final_binary}
 				end
 		end.
 
