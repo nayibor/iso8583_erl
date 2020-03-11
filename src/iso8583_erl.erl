@@ -1,7 +1,7 @@
 -module(iso8583_erl).
 
 %% API exports
--export([unpack/2,pack/2,get_size/2,set_field/4,set_field_list/2,set_mti/3,process_data_element/4,
+-export([unpack/2,pack/2,get_size/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,
 		 create_bitmap/2,get_bitmap_subs/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 %%====================================================================
@@ -53,21 +53,21 @@ get_size(Type,Value)->
 
 
 %%  @doc for setting the fields for an iso message
--spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_field(Iso_Map,Fld_num,Fld_val,Specification)->
-	iso8583_ascii:set_field(Iso_Map,Fld_num,Fld_val,Specification).
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer() ,Fld_val::term())->{ok,map()}|{error,term()}.
+set_field(Iso_Map,Fld_num,Fld_val)->
+	iso8583_ascii:set_field(Iso_Map,Fld_num,Fld_val).
 
 
 %%  @doc for setting the fields but accepts a list of fields and returns a map containing output
--spec set_field_list(List::list(),map())->map().
-set_field_list(List,Specification)->
-	iso8583_ascii:set_field_list(List,Specification).
+-spec set_field_list(List::list())->map().
+set_field_list(List)->
+	iso8583_ascii:set_field_list(List).
 
 
 %%  @doc for setting the fields for an iso message
--spec set_mti(Iso_Map::map(),Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_mti(Iso_Map,Mti_val,Specification)->
-	iso8583_ascii:set_mti(Iso_Map,mti,Mti_val,Specification).
+-spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}|{error,term()}.
+set_mti(Iso_Map,Mti_val)->
+	iso8583_ascii:set_mti(Iso_Map,Mti_val).
 	
 
 

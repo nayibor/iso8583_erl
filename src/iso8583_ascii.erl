@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/2,pack/2,set_field/4,set_field_list/2,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
+-export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
 		get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 
@@ -60,7 +60,7 @@ load_specification(Filename)->
 				bitmap_type->
 					maps:put(bitmap_type,Value,Acc);
 				Number when Number >=1,Number =<128 ->
-					#{code := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,format:=Format} = Value,
+#{data_format := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
 					maps:put(Number,{De_type,Length_field,Fl_vl,Header_length,Format},Acc)
 			end
@@ -148,7 +148,6 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 get_data_element(Data_value,Type)->
 		case Type of
 			"N"->
-				
 				bin_to_num(Data_value);
 			"B"->
 				Data_value;
@@ -190,27 +189,27 @@ pack(Message_Map,Specification)->
 %%creates a primary/secondary bitmap out of message map and specification
 -spec pack_message(primary|secondary,map(),map())->iolist().
 pack_message(primary,Message_Map,Specification)-> 
-		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,64)),
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map,Specification)) ,{<<>>,[]},lists:seq(2,64)),
 		Bitmap_final_bit = << 0,Bitmap_final/binary>>,
 		Bitmap_final_bit_list = create_bitmap(get_bitmap_type(Specification),Bitmap_final_bit),
-		Mti = maps:get(mti,Message_Map),
+		{ok,Mti} = format_data(1,maps:get(mti,Message_Map),Specification),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		[Mti,Bitmap_final_bit_list,Fields_list];
 
 
 pack_message(secondary,Message_Map,Specification)-> 
-		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map)) ,{<<>>,[]},lists:seq(2,128)),
+		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map,Specification)) ,{<<>>,[]},lists:seq(2,128)),
 		Bitmap_final_bit = << 1,Bitmap_final/binary>>,
 		Bitmap_final_bit_list = create_bitmap(get_bitmap_type(Specification),Bitmap_final_bit),
-		Mti = maps:get(mti,Message_Map),
+		{ok,Mti} = format_data(1,maps:get(mti,Message_Map),Specification),
 		Fields_list = lists:reverse(Iso_Fields_Binary),
 		[Mti,Bitmap_final_bit_list,Fields_list].
 
 
 %%used for setting the bitmap fields for each field based on whether the key exists or not
 %%returns anonymous  function which is used for setting up the bitmap
--spec pack_check_keys(maps:iterator()|map())->fun().
-pack_check_keys(Message_Map)->
+-spec pack_check_keys(maps:iterator()|map(),maps:iterator()|map())->fun().
+pack_check_keys(Message_Map,Specification)->
 		fun(Field_key,{Bitmap,Iso_Fields})->
 			case maps:get(Field_key,Message_Map,error) of
 				error ->
@@ -218,7 +217,8 @@ pack_check_keys(Message_Map)->
 					{New_Bitmap,Iso_Fields};
 				Value ->
 					New_Bitmap = << Bitmap/binary,1>>,
-					New_Iso_Fields = [Value|Iso_Fields],
+					{ok,Actual_value} = format_data(Field_key,Value,Specification),
+					New_Iso_Fields = [Actual_value|Iso_Fields],
 					{New_Bitmap,New_Iso_Fields}
 			end
 		end.
@@ -332,32 +332,26 @@ format_data(Key,Value,Specification)->
 pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
 		case Type of 
 			string ->
-				Status_check = erlang:length(Numb_check) =< Flength ,
-				case {Status_check,Fx_var_fixed} of 
-						{true,fx}->
+				case Fx_var_fixed of 
+						fx->
 							Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
 							{ok,Padded_data};
-						{true,vl}->
-									Size = erlang:length(Numb_check),
-									Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
-									Final_string = lists:append([Fsize,Numb_check]),
-									{ok,Final_string};
-						{false,_}->
-							{error,error_length}
+						vl->
+							Size = erlang:length(Numb_check),
+							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
+							Final_string = lists:append([Fsize,Numb_check]),
+							{ok,Final_string}
 				end;
 			binary ->
-				Status_check = erlang:size(Numb_check) =< Flength ,
-				case {Status_check,Fx_var_fixed} of 
-						{true,fx}->
+				case Fx_var_fixed of 
+						fx->
 							Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
 							{ok,Padded_data};
-						{true,vl}->
-								Size =  erlang:size(Numb_check),
-								Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-								Final_binary = [Fsize,<<Numb_check/binary>>],
-								{ok,Final_binary};
-						{false,_}->
-							{error,error_length}
+						vl->
+							Size =  erlang:size(Numb_check),
+							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
+							Final_binary = [Fsize,<<Numb_check/binary>>],
+							{ok,Final_binary}
 				end
 		end.
 
@@ -372,50 +366,34 @@ pad_data_string_binary(binary,Numb_check,Flength,Binary_char_pad)->
 		pad_data(Numb_check,Flength,Binary_char_pad).
 
 
-
-%%accepts response of formatting of iso field and then  updates iso map if result is good
--spec format_create_map(integer()|mti,{ok,term()}|{error,term()},map())->{ok,map()}|{error,term()}.
-format_create_map(Key,Resp,Old_iso_map)->
-		case Resp of
-			{ok,Val} ->
-				New_iso_map = maps:put(Key,Val,Old_iso_map),
-				{ok,New_iso_map};
-			Result = {error,_}->
-				Result
-		end.
-
-
 %%this is a special setting for setting the mti of a message
--spec set_mti(Iso_Map::map(),mti ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_mti(Iso_Map,mti,Fld_val,Specification)->
-		Resp = format_data(1,Fld_val,Specification),
-		format_create_map(mti,Resp,Iso_Map).
+-spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}|{error,term()}.
+set_mti(Iso_Map,Fld_val)->
+		{ok,maps:put(mti,Fld_val,Iso_Map)}.
 
 
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_field(Iso_Map,Fld_num,Fld_val,Specification)->
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
+set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
 			mti ->
-				Resp = format_data(1,Fld_val,Specification),	
-				format_create_map(mti,Resp,Iso_Map);
+				{ok,maps:put(mti,Fld_val,Iso_Map)};
 			_ ->					
-				Resp = format_data(Fld_num,Fld_val,Specification),
-				format_create_map(Fld_num,Resp,Iso_Map)
+				{ok,maps:put(Fld_num,Fld_val,Iso_Map)}
 		end.
 
 
 %%this is for accepting a list containing the various fields and then creating an creating an output map 
 %%which can be fed into the pack function
 %%it can also also throw an exception if input data was of the wrong format for an individual field
--spec set_field_list(List::list(),map())->map().
-set_field_list(List,Specification)->
+-spec set_field_list(List::list())->map().
+set_field_list(List)->
 		First_map = maps:new(),
 		lists:foldl(
 		fun({Key,Value},Acc)->
-			{ok,Map_new_Accum} = set_field(Acc,Key,Value,Specification),
+			{ok,Map_new_Accum} = set_field(Acc,Key,Value),
 			Map_new_Accum
 		end,First_map,List).
 
