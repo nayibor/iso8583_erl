@@ -8,7 +8,7 @@
 
 -module(iso8583_ascii).
 
--export([unpack/2,pack/2,set_field/4,set_field_list/2,set_mti/4,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
+-export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
 		get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 
@@ -366,47 +366,34 @@ pad_data_string_binary(binary,Numb_check,Flength,Binary_char_pad)->
 		pad_data(Numb_check,Flength,Binary_char_pad).
 
 
-
-%%accepts response of formatting of iso field and then  updates iso map if result is good
--spec format_create_map(integer()|mti,{ok,term()}|{error,term()},map())->{ok,map()}|{error,term()}.
-format_create_map(Key,Resp,Old_iso_map)->
-		case Resp of
-			{ok,Val} ->
-				New_iso_map = maps:put(Key,Val,Old_iso_map),
-				{ok,New_iso_map};
-			Result = {error,_}->
-				Result
-		end.
-
-
 %%this is a special setting for setting the mti of a message
--spec set_mti(Iso_Map::map(),mti ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_mti(Iso_Map,mti,Fld_val,Specification)->
-		format_create_map(mti,{ok,Fld_val},Iso_Map).
+-spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}|{error,term()}.
+set_mti(Iso_Map,Fld_val)->
+		{ok,maps:put(mti,Fld_val,Iso_Map)}.
 
 
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term(),map())->{ok,map()}|{error,term()}.
-set_field(Iso_Map,Fld_num,Fld_val,Specification)->
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
+set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
 			mti ->
-				format_create_map(mti,{ok,Fld_val},Iso_Map);
+				{ok,maps:put(mti,Fld_val,Iso_Map)};
 			_ ->					
-				format_create_map(Fld_num,{ok,Fld_val},Iso_Map)
+				{ok,maps:put(Fld_num,Fld_val,Iso_Map)}
 		end.
 
 
 %%this is for accepting a list containing the various fields and then creating an creating an output map 
 %%which can be fed into the pack function
 %%it can also also throw an exception if input data was of the wrong format for an individual field
--spec set_field_list(List::list(),map())->map().
-set_field_list(List,Specification)->
+-spec set_field_list(List::list())->map().
+set_field_list(List)->
 		First_map = maps:new(),
 		lists:foldl(
 		fun({Key,Value},Acc)->
-			{ok,Map_new_Accum} = set_field(Acc,Key,Value,Specification),
+			{ok,Map_new_Accum} = set_field(Acc,Key,Value),
 			Map_new_Accum
 		end,First_map,List).
 

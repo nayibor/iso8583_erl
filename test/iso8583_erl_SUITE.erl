@@ -24,31 +24,31 @@ end_per_testcase(_, _Config) ->
 
 set_field(_Config)->
 	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
-	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
-	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
-	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012,Specification),
-	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,Specification),
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
+	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012),
+	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000),
 	?assertEqual(true,#{3 => 201234,4 => 123456789012,5 => 5000,mti => 200} =:= Fourth_map).
 	
 pack_data(_Config) ->
 	%%one way to pack data
 	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
-	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
-	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
-	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5,Specification),
-	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000,Specification),
-	{ok,Fifth_map} = iso8583_erl:set_field(Fourth_map,102,"123413243",Specification),
-	{ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,"12897979987",Specification),
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
+	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,4.5),
+	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,5000),
+	{ok,Fifth_map} = iso8583_erl:set_field(Fourth_map,102,"123413243"),
+	{ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,"12897979987"),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Specification),
 	%another way to pack data
-	Map_send_list = iso8583_erl:set_field_list([{mti,0200},{3,201234},{4,4.5},{5,5000},{102,"123413243"},{103,"12897979987"}],Specification),
+	Map_send_list = iso8583_erl:set_field_list([{mti,0200},{3,201234},{4,4.5},{5,5000},{102,"123413243"},{103,"12897979987"}]),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification).
 
 
 pack_data_2(_Config)->
 	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
 	Map_send_list = iso8583_erl:set_field_list([{mti,0200},{2,1231231312},{4,1000.5},{7,1107221800},{11,1},{12,200217},{18,1234},{19,233},
-	{20,233},{39,"00"},{40,100},{41,"EBS00001"},{101,"test_file.civ"},{102,"1111111111"},{103,"00101010101001"}],Specification),
+	{20,233},{39,"00"},{40,100},{41,"EBS00001"},{101,"test_file.civ"},{102,"1111111111"},{103,"00101010101001"}]),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification),
 	Final_1 =  lists:append([Mti,Bitmap_final_bit,lists:append(Fields_list)]),
 	?assertEqual(true,Final_1 =:= "0200D230700003800000000000000E0000001012312313120000001000.51107221800000001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001").
@@ -56,10 +56,10 @@ pack_data_2(_Config)->
 unpack_data(_Config)->
 	%%pack the data first
 	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
-	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200,Specification),
-	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234,Specification),
-	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012,Specification),
-	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,123456789012,Specification),
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),0200),
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,201234),
+	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,123456789012),
+	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,123456789012),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,Specification),
 	Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
 	Map_data = #{3 => 201234,4 => 123456789012,5 => 123456789012,
