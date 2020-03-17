@@ -59,6 +59,8 @@ load_specification(Filename)->
 			case Key of 
 				bitmap_type->
 					maps:put(bitmap_type,Value,Acc);
+				valid_mti ->
+					maps:put(valid_mti,Value,Acc);
 				Number when Number >=1,Number =<128 ->
 #{data_format := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
