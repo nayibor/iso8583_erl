@@ -1,7 +1,7 @@
 -module(iso8583_erl).
 
 %% API exports
--export([unpack/2,pack/2,get_size/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,validate_data/2,
+-export([unpack/2,pack/2,get_size/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,validate_data/3,
 		 create_bitmap/2,get_bitmap_subs/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 %%====================================================================
@@ -48,9 +48,9 @@ unpack(IsoMessage,Specification)->
 %% @doc this is for validating an iso8583 message for incoming/outgoing messages based on a  loaded specification
 %% specification should have been loaded
 %% @doc De_type,Length_field,Fl_vl,Header_length,Format
--spec validate_data(map(),map())->{{ok,map()},{error,list()}}.
-validate_data(Data_map,Specification_map)->
-	iso8583_validate:validate_data(Data_map,Specification_map).
+-spec validate_data(map(),map(),out|in)->{{ok,map()},{error,list()}}.
+validate_data(Data_map,Specification_map,Out_or_in)->
+	iso8583_validate:validate_data(Data_map,Specification_map,Out_or_in).
 
 
 %%  @doc for getting the final size of a bitmap or field list
