@@ -5,11 +5,11 @@
 %%% @copyright Nuku Ameyibor <nayibor@startmail.com>
 
 
--module(iso8583_ascii).
+-module(iso8583_process).
 
 -export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
-		get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1,
-		get_data_element/2]).
+		get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1
+		]).
 
 
 %% @doc this is for performing a binary fold kind of like a list fold
@@ -62,9 +62,9 @@ load_specification(Filename)->
 				valid_mti ->
 					maps:put(valid_mti,Value,Acc);
 				Number when Number >=1,Number =<128 ->
-#{data_format := Code,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
+					#{pad_info := Pad_info,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
-					maps:put(Number,{De_type,Length_field,Fl_vl,Header_length,Format},Acc)
+					maps:put(Number,{De_type,Length_field,Fl_vl,Header_length,Format,Pad_info},Acc)
 			end
 		end,Map_spec,Spec_data).
 
@@ -76,7 +76,7 @@ fixed_variable(Number) when Number > 0,is_integer(Number)->vl.
 
 
 %% @doc gets the specification for a particular field
--spec get_spec_field(non_neg_integer(),map())->tuple().
+-spec get_spec_field(non_neg_integer()|mti|valid_mti,map())->tuple().
 get_spec_field(Field,Specification)->
 	maps:get(Field,Specification).
 
@@ -117,21 +117,19 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 		Map_Init = maps:new(),
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
-					{Data_type,Flength,Fx_var_fixed,Fx_header_length,_} = get_spec_field(Current_index_in,Specification),
+					{Data_type,Flength,Fx_var_fixed,Fx_header_length,_,_} = get_spec_field(Current_index_in,Specification),
 					Data_index = case Fx_var_fixed of
 						fx -> 
 							Data_element_fx_raw = binary:part(Data_for_use_in,Index_start_in,Flength),
-							Data_element_vl = get_data_element(Data_element_fx_raw,Data_type),
 							New_Index_vl = Index_start_in+Flength,
-							{Data_element_vl,New_Index_vl};
+							{Data_element_fx_raw,New_Index_vl};
 						vl ->
 							Header = binary:part(Data_for_use_in,Index_start_in,Fx_header_length),
 							Header_value = erlang:binary_to_integer(Header),
 							Start_val = Index_start_in + Fx_header_length,
 							Data_element_vl_raw = binary:part(Data_for_use_in,Start_val,Header_value),
-							Data_element_vl = get_data_element(Data_element_vl_raw,Data_type),
 							New_Index_vl = Start_val+Header_value,
-							{Data_element_vl,New_Index_vl}
+							{Data_element_vl_raw,New_Index_vl}
 								end, 
 					{Data_element,New_Index} = Data_index,
 					NewMap = maps:put(Current_index_in,Data_element,Map_out_list_in),
@@ -143,36 +141,6 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 			end, {Data_binary,0,Index_start,Map_Init},Bitmap),
 		{_,_,_,Fldata} = OutData,
 		Fldata.
-
-
-%%for deriving native value of unpacked data
--spec get_data_element(binary(),atom())->number()|list()|binary().
-get_data_element(Data_value,Type)->
-		case Type of
-			"N"->
-				bin_to_num(Data_value);
-			"B"->
-				Data_value;
-			"ANS"->
-				erlang:binary_to_list(Data_value);
-			"AN"->
-				erlang:binary_to_list(Data_value);				
-			"NS"->
-				erlang:binary_to_list(Data_value);
-			"HEX"->
-				erlang:binary_to_list(Data_value)
-		end.
-
-
-
-%%for converting a number to a float or an integer based on input 
--spec bin_to_num(binary())->float()|integer().
-bin_to_num(Bin) ->
-	    N = binary_to_list(Bin),
-	    case string:to_float(N) of
-	        {error,no_float} -> list_to_integer(N);
-	        {F,_Rest} -> F
-	    end.
 
 
 %% @doc marshalls a message to be sent.
@@ -230,26 +198,27 @@ pack_check_keys(Message_Map,Specification)->
 %% @doc for getting the bitmap,mti,Data fields 
 -spec get_bitmap_subs(atom(),binary(),map())-> tuple().
 get_bitmap_subs(binary,Bin_message,Specification)->
-		{_,Flength,_,_,_} = get_spec_field(1,Specification),
+		{_,Flength,_,_,_,_} = get_spec_field(1,Specification),
 		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
-		Bitsize = case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
-							<<"0">> -> 8;
-							<<"1">> -> 16
-				  end,		
+		Bitsize = 
+		case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
+			<<"0">> -> 8;
+			<<"1">> -> 16
+	    end,		
 		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
 		Bit_mess = << << (convert_base_pad(One,8,<<"0">>))/binary >>  || <<One>> <= Bitmap_Segment >>,
 		{Mti,Bit_mess,Bitmap_Segment,Rest};
 
 
 get_bitmap_subs(hex,Bin_message,Specification)->
-		{_,Flength,_,_,_} = get_spec_field(1,Specification),
+		{_,Flength,_,_,_,_} = get_spec_field(1,Specification),
 		One_dig = binary_part(Bin_message,Flength,1),
 		Size_base_ten = erlang:binary_to_integer(One_dig,16),
-		Bitsize =
-			case  Size_base_ten =< 7 of
-				true -> 16;
-				false -> 32
-			end,
+		Bitsize = 
+		case  Size_base_ten =< 7 of
+			true -> 16;
+			false -> 32
+		end,
 		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
 		Bit_mess = fold_bin(
 			 fun(<<X:2/binary, Rest_bin/binary>>,Bin_list_final) ->
@@ -299,32 +268,29 @@ create_bitmap(hex,Bitmap_final_bit)->
 %%not full featured but just enough to make it work
 -spec format_data(integer()|mti,term(),map())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Specification)->
-		{Ftype,Flength,Fx_var_fixed,Fx_header_length,_}  = get_spec_field(Key,Specification),
+		{Ftype,Flength,Fx_var_fixed,Fx_header_length,_,_}  = get_spec_field(Key,Specification),
 		case Ftype of
-			"N" ->  %%input will be number
-				Numb_check = 
-					case {erlang:is_integer(Value),erlang:is_float(Value)} of
-						{true,_}->
-							 erlang:integer_to_list(Value);
-						{_,true}->
-							erlang:float_to_list(Value,[{decimals,5},compact])
-					end,
+			"N" ->  %%input will be binary digit
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
+			"A" ->  %%input will be binary alphabet
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
+			"S" ->  %%input will be binary special character
+				Numb_check = erlang:binary_to_list(Value),
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
 			"B" ->  %%  input will be binary
 				Numb_check = Value,
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>,binary);
-			"ANS" -> %% input will be alphnumberic special character string
-				Numb_check = Value,
+			"AN" ->  %%input will be  binary alphanumberic
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
+			"NS" ->  %% input will be numeric and special character
+				Numb_check = erlang:binary_to_list(Value),
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"AN" -> %% input will be alphnumberic  character string
-				Numb_check = Value,
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"NS" ->  %% input will be numeric and special character string
-				Numb_check = Value,
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"HEX"-> %% input will be hexadecimal string
-				Numb_check = Value,
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$ ,string)
+			"ANS" -> %% input will be binary alphnumberic
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string)
 		end.
 
 
