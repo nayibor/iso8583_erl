@@ -34,23 +34,42 @@ validate_data(Data_map,Specification_map,Out_or_in)->
 	maps:fold(Map_fold,{{ok,maps:new()},{error,[]}},Data_map).
 
 
-
-%% @doc for validating  a particular element based on fixed length field 
+%% @doc  input data length must be equal as field length when fixed length and no padding and outgoing
 -spec validate_data_sub(tuple())->{error,binary()}|true.
-validate_data_sub({Data,Flength,Fx_var_fixed,Fx_header_length,Sub_format,{none,_},out})when  
-	erlang:size(Data) =:= Flength andalso erlang:size(Data) > 0->
+validate_data_sub({Data,Flength,fx,Fx_header_length,Sub_format,{none,_},out})when  
+	erlang:size(Data) =:= Flength andalso erlang:size(Data) > 0 ->
 		perform_validation(Data,Sub_format);
 
 
-%% @doc for validating  a particular element based variable length field
-validate_data_sub({Data,Flength,Fx_var_fixed,Fx_header_length,Sub_format,{_,_},out})when  
+%% @doc input data length can be less than or equal to field length when variable length and no padding and outgoing
+validate_data_sub({Data,Flength,vl,Fx_header_length,Sub_format,{none,_},out})when  
+	erlang:size(Data) =< Flength andalso erlang:size(Data) > 0 ->
+		perform_validation(Data,Sub_format);
+
+
+%% @doc input data length can be less than or equal to field length when  fixed length and padded and outgoing
+validate_data_sub({Data,Flength,fx,Fx_header_length,Sub_format,{_,_},out})when  
+	erlang:size(Data) =< Flength andalso erlang:size(Data) > 0 ->
+		perform_validation(Data,Sub_format);
+
+
+%% @doc incoming data length must be equal as field length when fixed length and no padding and incoming
+validate_data_sub({Data,Flength,fx,Fx_header_length,Sub_format,{none,_},in})when  
+     erlang:size(Data) =:= Flength andalso erlang:size(Data) > 0->
+		perform_validation(Data,Sub_format);
+
+
+%% @doc incoming data length can be less than or equal to field length when variable length and no padding and incoming
+validate_data_sub({Data,Flength,vl,Fx_header_length,Sub_format,{none,_},in})when  
      erlang:size(Data) =< Flength andalso erlang:size(Data) > 0->
 		perform_validation(Data,Sub_format);
-		
-%% @doc for validating  a particular element based on fixed length field 
-validate_data_sub({Data,Flength,Fx_var_fixed,Fx_header_length,Sub_format,{none,_},in})when  
-	erlang:size(Data) =:= Flength andalso erlang:size(Data) > 0->
+
+
+%% @doc incoming data length must be equal as field length when fixed length and padding and incoming
+validate_data_sub({Data,Flength,fx,Fx_header_length,Sub_format,{_,_},in})when  
+     erlang:size(Data) =:= Flength andalso erlang:size(Data) > 0->
 		perform_validation(Data,Sub_format);
+
 
 
 validate_data_sub(_)->

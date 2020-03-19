@@ -267,95 +267,47 @@ create_bitmap(hex,Bitmap_final_bit)->
 -spec format_data(integer()|mti,term(),map())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Specification)->
 		{Flength,Fx_var_fixed,Fx_header_length,Sub_format,{Pad_info,Pad_char}}  = get_spec_field(Key,Specification),
-		case Sub_format of
-			"N" ->  %%input will be binary digit
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"F" ->  %%input will be binary floating point digit
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"A" ->  %%input will be binary alphabet
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"S" ->  %%input will be binary special character
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"B" ->  %%  input will be binary
-				Numb_check = Value,
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,<<" ">>,binary);
-			"AN" ->  %%input will be  binary alphanumberic
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"NS" ->  %% input will be digit or special character
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"SN" ->  %% input will be a signed digit
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);				
-			"SF" ->  %% input will be a signed floating point binary digit
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);				
-			"ANS" -> %% input will be binary alpha,digit,special character
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"MMDDhhmmss" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"MMDD" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"hhmmss" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"YYMM" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"YYMMddhhmmss" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"YYMMDD" -> %% date format
-				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string)				
-		end.
+		pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Value,Pad_char,Pad_info).
 
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
 -spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Type)->
-		case Type of 
-			string ->
-				case Fx_var_fixed of 
-						fx->
-							Padded_data = pad_data_string_binary(string,Numb_check,Flength,Char_pad),
-							{ok,Padded_data};
-						vl->
-							Size = erlang:length(Numb_check),
-							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),
-							Final_string = lists:append([Fsize,Numb_check]),
-							{ok,Final_string}
-				end;
-			binary ->
-				case Fx_var_fixed of 
-						fx->
-							Padded_data = pad_data_string_binary(binary,Numb_check,Flength,Char_pad),
-							{ok,Padded_data};
-						vl->
-							Size =  erlang:size(Numb_check),
-							Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-							Final_binary = [Fsize,<<Numb_check/binary>>],
-							{ok,Final_binary}
-				end
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Pad_char,none)->
+		case Fx_var_fixed of 
+			fx->
+				{ok,Numb_check};
+			vl->
+				Size =  erlang:size(Numb_check),
+				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
+				Final_binary = [Fsize,Numb_check],
+				{ok,Final_binary}
+		end;
+
+
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Pad_direction)->
+		case Fx_var_fixed of 
+			fx->
+				Padded_data = pad_data_new(Numb_check,Flength,Char_pad,Pad_direction),
+				{ok,Padded_data};
+			vl->
+				Size =  erlang:size(Numb_check),
+				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
+				Final_binary = [Fsize,Numb_check],
+				{ok,Final_binary}
 		end.
 
 
-%%for padding a string or a binary up to a certain length with one string character or binary character
--spec pad_data_string_binary('string'|'binary',binary()|string(),non_neg_integer(),char()|<<_:8>>)->{ok,string()|binary()}.
-pad_data_string_binary(string,Numb_check,Flength,Binary_char_pad)->
-		string:right(Numb_check,Flength,Binary_char_pad);
-
-
-pad_data_string_binary(binary,Numb_check,Flength,Binary_char_pad)->
-		pad_data(Numb_check,Flength,Binary_char_pad).
+%%for padding a binary up to a certain length with one string character or binary character
+-spec pad_data_new(binary(),non_neg_integer(),char()|<<_:8>>,left|right)->{ok,string()|binary()}.
+pad_data_new(Numb_check,Flength,Binary_char_pad,Pad_direction)->
+		Pad_size = Flength-size(Numb_check),
+		Pad_info = binary:copy(Binary_char_pad,Pad_size),
+		case Pad_direction of
+			right ->
+				<< Pad_info/binary,Numb_check/binary >>;
+			left ->
+				<< Numb_check/binary,Pad_info/binary >>
+		end.
 
 
 %%this is a special setting for setting the mti of a message
