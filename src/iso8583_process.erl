@@ -366,14 +366,15 @@ get_size(bitmap,Bitmap)->
 
 
 get_size(field_list,Fields_list)->
-	lists:foldl(fun(X,Acc)->
-		case {is_list(X),is_binary(X)} of
-			{true,_}->
-				Acc+length(X);
-			{_,true}->
+	lists:foldl(
+	fun(X,Acc)->
+		case X of
+			[Length,Value]->
+				Acc+erlang:list_to_integer(Length);
+			Value ->
 				Acc+size(X)
 		end
-	  end,0,Fields_list).
+	end,0,Fields_list).
 
 
 %%for getting the final size of the message to be sent 
