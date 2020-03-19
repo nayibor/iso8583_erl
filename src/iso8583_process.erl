@@ -59,12 +59,10 @@ load_specification(Filename)->
 			case Key of 
 				bitmap_type->
 					maps:put(bitmap_type,Value,Acc);
-				valid_mti ->
-					maps:put(valid_mti,Value,Acc);
 				Number when Number >=1,Number =<128 ->
-					#{pad_info := Pad_info,de_type := De_type,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
+					#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
-					maps:put(Number,{De_type,Length_field,Fl_vl,Header_length,Format,Pad_info},Acc)
+					maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc)
 			end
 		end,Map_spec,Spec_data).
 
@@ -76,7 +74,7 @@ fixed_variable(Number) when Number > 0,is_integer(Number)->vl.
 
 
 %% @doc gets the specification for a particular field
--spec get_spec_field(non_neg_integer()|mti|valid_mti,map())->tuple().
+-spec get_spec_field(non_neg_integer()|mti,map())->tuple().
 get_spec_field(Field,Specification)->
 	maps:get(Field,Specification).
 
@@ -117,7 +115,7 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 		Map_Init = maps:new(),
 		OutData = fold_bin(
 			 fun(<<X:1/binary, Rest_bin/binary>>, {Data_for_use_in,Index_start_in,Current_index_in,Map_out_list_in}) when X =:= <<"1">> ->
-					{Data_type,Flength,Fx_var_fixed,Fx_header_length,_,_} = get_spec_field(Current_index_in,Specification),
+					{Flength,Fx_var_fixed,Fx_header_length,_,_} = get_spec_field(Current_index_in,Specification),
 					Data_index = case Fx_var_fixed of
 						fx -> 
 							Data_element_fx_raw = binary:part(Data_for_use_in,Index_start_in,Flength),
@@ -198,7 +196,7 @@ pack_check_keys(Message_Map,Specification)->
 %% @doc for getting the bitmap,mti,Data fields 
 -spec get_bitmap_subs(atom(),binary(),map())-> tuple().
 get_bitmap_subs(binary,Bin_message,Specification)->
-		{_,Flength,_,_,_,_} = get_spec_field(1,Specification),
+		{Flength,_,_,_,_} = get_spec_field(1,Specification),
 		<<One_dig/integer>> = binary_part(Bin_message,Flength,1),
 		Bitsize = 
 		case  binary_part(convert_base_pad(One_dig,8,<<"0">>),0,1) of
@@ -211,7 +209,7 @@ get_bitmap_subs(binary,Bin_message,Specification)->
 
 
 get_bitmap_subs(hex,Bin_message,Specification)->
-		{_,Flength,_,_,_,_} = get_spec_field(1,Specification),
+		{Flength,_,_,_,_} = get_spec_field(1,Specification),
 		One_dig = binary_part(Bin_message,Flength,1),
 		Size_base_ten = erlang:binary_to_integer(One_dig,16),
 		Bitsize = 
@@ -268,9 +266,12 @@ create_bitmap(hex,Bitmap_final_bit)->
 %%not full featured but just enough to make it work
 -spec format_data(integer()|mti,term(),map())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Specification)->
-		{Ftype,Flength,Fx_var_fixed,Fx_header_length,_,_}  = get_spec_field(Key,Specification),
-		case Ftype of
+		{Flength,Fx_var_fixed,Fx_header_length,Sub_format,{Pad_info,Pad_char}}  = get_spec_field(Key,Specification),
+		case Sub_format of
 			"N" ->  %%input will be binary digit
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
+			"F" ->  %%input will be binary floating point digit
 				Numb_check = erlang:binary_to_list(Value),
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
 			"A" ->  %%input will be binary alphabet
@@ -285,12 +286,36 @@ format_data(Key,Value,Specification)->
 			"AN" ->  %%input will be  binary alphanumberic
 				Numb_check = erlang:binary_to_list(Value),
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$0,string);
-			"NS" ->  %% input will be numeric and special character
+			"NS" ->  %% input will be digit or special character
 				Numb_check = erlang:binary_to_list(Value),
 				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
-			"ANS" -> %% input will be binary alphnumberic
+			"SN" ->  %% input will be a signed digit
 				Numb_check = erlang:binary_to_list(Value),
-				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string)
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);				
+			"SF" ->  %% input will be a signed floating point binary digit
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);				
+			"ANS" -> %% input will be binary alpha,digit,special character
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"MMDDhhmmss" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"MMDD" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"hhmmss" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"YYMM" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"YYMMddhhmmss" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string);
+			"YYMMDD" -> %% date format
+				Numb_check = erlang:binary_to_list(Value),
+				pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,$  ,string)				
 		end.
 
 
