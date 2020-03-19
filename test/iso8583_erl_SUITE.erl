@@ -57,8 +57,8 @@ pack_data_2(Config)->
 	Map_send_list = iso8583_erl:set_field_list([{mti,<<"0200">>},{2,<<"1231231312">>},{4,<<"1000.5">>},{7,<<"1107221800">>},{11,<<"1">>},{12,<<"200217">>},{18,<<"1234">>},{19,<<"233">>},
 	{20,<<"233">>},{39,<<"00">>},{40,<<"100">>},{41,<<"EBS00001">>},{101,<<"test_file.civ">>},{102,<<"1111111111">>},{103,<<"00101010101001">>}]),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Map_send_list,Specification),
-	Final_1 =  lists:append([Mti,Bitmap_final_bit,lists:append(Fields_list)]),
-	?assertEqual(true,Final_1 =:= "0200D230700003800000000000000E0000001012312313120000001000.51107221800000001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001").
+	Final_1 =  erlang:list_to_binary([Mti,Bitmap_final_bit,Fields_list]),
+	?assertEqual(true,Final_1 =:= <<"0200D230700003800000000000000E0000001012312313120000001000.511072218001200217123423323300100EBS0000113test_file.civ1011111111111400101010101001">>).
 
 unpack_data(Config)->
 	%%pack the data first
@@ -68,7 +68,7 @@ unpack_data(Config)->
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,<<"123456789012">>),
 	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,<<"123456789012">>),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,Specification),
-	Final_fields = [Mti,Bitmap_final_bit,lists:append(Fields_list)],
+	Final_fields = [Mti,Bitmap_final_bit,Fields_list],
 	Map_data = #{3 => <<"001234">>,4 => <<"123456789012">>,5 => <<"123456789012">>,
     bit => <<"3800000000000000">>,mti => <<"0200">>},
 	?assertEqual(true,Map_data =:= iso8583_erl:unpack(Final_fields,Specification)).
@@ -126,8 +126,8 @@ create_bitmap_spec(Config)->
 get_bitmap_subs(Config)->
 	%%get the mti,the text binary and the integer binary,as well as the text fields converted to a binary
 	Specification =?config(spec, Config),
-	{Mti,Text_Binary,Integer_binary,Binary_fields} = {<<"0200">>,<<"0011100000000000000000000000000000000000000000000000000000000000">>,
+	{Mti,Binary_bitmap,Message_bitmap,Message_binary_segment} = {<<"0200">>,<<"0011100000000000000000000000000000000000000000000000000000000000">>,
 	<<56,0,0,0,0,0,0,0>>,<<"201234123456789012123456789012">>},
 	Response = 
 	iso8583_erl:get_bitmap_subs(binary,<<48,50,48,48,56,0,0,0,0,0,0,0,50,48,49,50,51,52,49,50,51,52,53,54,55,56,57,48,49,50,49,50,51,52,53,54,55,56,57,48,49,50>>,Specification),
-	{Mti,Text_Binary,Integer_binary,Binary_fields} = Response.
+	{Mti,Binary_bitmap,Message_bitmap,Message_binary_segment} = Response.

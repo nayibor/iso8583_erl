@@ -82,6 +82,10 @@ perform_validation(Data,"N")  ->
 	run_regex(Data,"^[0-9]*$",[]);
 
 
+%% @doc for performing validation on each data element  for a number prefixed by space
+perform_validation(Data,"NP")  ->
+	run_regex(Data,"^[0-9]*$",[]);
+
 
 %% @doc for performing validation on each data element for a signed number beginning with C or D
 perform_validation(Data,"SN")->
@@ -125,6 +129,24 @@ perform_validation(Data,"NS")->
 perform_validation(Data,"B")->
 	true;
 
+
+%% for checking unknown types
+perform_validation(Data,"UNK")->
+	true;
+
+
+%%for checking tlv values 
+perform_validation(Data,"TLV")->
+	true;
+
+%%for checking track two data
+perform_validation(Data,"TT")->
+	true;
+
+
+%%for right justifed and zero filled values
+perform_validation(Data,"NE")->
+	true;
 
 perform_validation(Data=[MM,DD,HH,MM,SS],"MMDDhhmmss")->
 	run_regex(Data,"",[]);
