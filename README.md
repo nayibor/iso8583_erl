@@ -9,8 +9,15 @@ It accepts a specification file which contains information about fields,mti,bitm
 
 It then uses those specifications to then pack and unpack iso messages for your interchange.
 
+The specification can be loaded once and then used for all packing and unpacking operations
 
 
+## usage ##
+
+the library can be used by putting the following in your rebar.config as a dep
+```erlang
+			{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"1.0.0"}}}
+```
 
 
 ## quickstart ##
@@ -48,7 +55,7 @@ It then uses those specifications to then pack and unpack iso messages for your 
 	{ok,Fifth_map} = iso8583_erl:set_field(Fourth_map,102,<<"123413243">>),
 	{ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,<<"12897979987">>),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Specification),
-	Final_length = iso8583_ascii:get_size_send(Mti,Bitmap_final_bit,Fields_list),
+	Final_length = iso8583_erl:get_size_send(Mti,Bitmap_final_bit,Fields_list),
 	%% zero padded to a 2 byte header
 	Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
 	%%send to interface
