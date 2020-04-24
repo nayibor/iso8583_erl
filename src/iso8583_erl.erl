@@ -1,7 +1,7 @@
 -module(iso8583_erl).
 
 %% API exports
--export([unpack/2,pack/2,get_size/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,validate_data/3,
+-export([unpack/2,pack/2,get_size/2,get_field/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,validate_data/3,
 		 create_bitmap/2,get_bitmap_subs/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 %%====================================================================
@@ -59,6 +59,13 @@ validate_data(Data_map,Specification_map,Out_or_in)->
 	Value  	:: iolist()|binary()|list().
 get_size(Type,Value)->	
 	iso8583_process:get_size(Type,Value).
+
+
+
+%% @doc this is for getting a particular field in an iso message back
+-spec get_field(Fld_num::pos_integer()|binary(),Iso_Map::map())->{ok,term()}|error.
+get_field(Fld_num,Iso_Map)->
+	iso8583_process:get_field(Fld_num,Iso_Map).
 
 
 %%  @doc for setting the fields for an iso message

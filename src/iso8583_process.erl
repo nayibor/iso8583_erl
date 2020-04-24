@@ -267,32 +267,44 @@ create_bitmap(hex,Bitmap_final_bit)->
 -spec format_data(integer()|mti,term(),map())->{ok,term()}|{error,term()}.
 format_data(Key,Value,Specification)->
 		{Flength,Fx_var_fixed,Fx_header_length,Sub_format,{Pad_info,Pad_char}}  = get_spec_field(Key,Specification),
-		pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Value,Pad_char,Pad_info).
+		pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Value,Sub_format,Pad_char,Pad_info).
 
+
+
+%% @doc for checking if data type is of binary so it can be changed to  string if not
+-spec check_binary_spec(binary(),list())->binary()|list().
+check_binary_spec(Data,Sub_format)->
+	case Sub_format of
+		"B"->
+			Data;
+		_ ->
+			erlang:binary_to_list(Data)
+	end.
+		
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
--spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Pad_char,none)->
+-spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Sub_format,Pad_char,none)->
 		case Fx_var_fixed of 
 			fx->
-				{ok,Numb_check};
+				{ok,check_binary_spec(Numb_check,Sub_format)};
 			vl->
 				Size =  erlang:size(Numb_check),
 				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-				Final_binary = [Fsize,Numb_check],
+				Final_binary = [Fsize,check_binary_spec(Numb_check,Sub_format)],
 				{ok,Final_binary}
 		end;
 
 
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Pad_direction)->
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Sub_format,Char_pad,Pad_direction)->
 		case Fx_var_fixed of 
 			fx->
 				Padded_data = pad_data_new(Numb_check,Flength,Char_pad,Pad_direction),
-				{ok,Padded_data};
+				{ok,check_binary_spec(Padded_data,Sub_format)};
 			vl->
 				Size =  erlang:size(Numb_check),
 				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-				Final_binary = [Fsize,Numb_check],
+				Final_binary = [Fsize,check_binary_spec(Numb_check,Sub_format)],
 				{ok,Final_binary}
 		end.
 
@@ -381,5 +393,5 @@ get_size(field_list,Fields_list)->
 %%-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
 -spec get_size_send([any()],binary() | [any()],binary() | [any()])->non_neg_integer(). 
 get_size_send(Mti,Bitmap_final_bit,Fields_list)->
-	length(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
+	erlang:iolist_size([Mti,Bitmap_final_bit,Fields_list]).
 
