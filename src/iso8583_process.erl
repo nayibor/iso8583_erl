@@ -381,5 +381,5 @@ get_size(field_list,Fields_list)->
 %%-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
 -spec get_size_send([any()],binary() | [any()],binary() | [any()])->non_neg_integer(). 
 get_size_send(Mti,Bitmap_final_bit,Fields_list)->
-	length(Mti)+get_size(bitmap,Bitmap_final_bit)+get_size(field_list,Fields_list).
+	erlang:iolist_size([Mti,Bitmap_final_bit,Fields_list]).
 
