@@ -9,8 +9,15 @@ It accepts a specification file which contains information about fields,mti,bitm
 
 It then uses those specifications to then pack and unpack iso messages for your interchange.
 
+The specification can be loaded once and then used for all packing and unpacking operations
 
 
+## usage ##
+
+the library can be used by putting the following in your rebar.config as a dep
+```erlang
+			{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"1.0.0"}}}
+```
 
 
 ## quickstart ##
