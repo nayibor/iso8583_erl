@@ -13,7 +13,7 @@ all() -> [pack_data,set_field,unpack_data,unpack_data_secodary_bitmap_message,un
 
 init_per_suite(Config) ->
     ok = application:ensure_started(iso8583_erl),
-    Config.
+    [{spec_path,"custom.cfg"}|Config].
 
 
 end_per_suite(_) ->
@@ -21,7 +21,7 @@ end_per_suite(_) ->
 
 
 init_per_testcase(_, Config) ->
-    Spec_path = code:priv_dir(iso8583_erl)++"/custom.cfg",
+	Spec_path = filename:join(?config(data_dir,Config),?config(spec_path, Config)),
     Specification = iso8583_erl:load_specification(Spec_path),
     [{spec,Specification} | Config].
 
