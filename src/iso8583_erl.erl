@@ -2,7 +2,7 @@
 
 %% API exports
 -export([unpack/2,pack/2,get_size/2,get_field/2,set_field/3,set_field_list/1,set_mti/2,process_data_element/4,validate_data/3,
-		 create_bitmap/2,get_bitmap_subs/3,get_size_send/3,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
+		 create_bitmap/2,get_bitmap_subs/3,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1]).
 
 %%====================================================================
 %% API functions
@@ -110,9 +110,11 @@ get_bitmap_subs(Bitmap_type,Bin_message,Specification)->
 
 
 %%for getting the final size of the message to be sent 
--spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
-get_size_send(Mti,Bitmap_final_bit,Fields_list)->
-	iso8583_process:get_size_send(Mti,Bitmap_final_bit,Fields_list).
+%%-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
+-spec get_size_send(iolist(),non_neg_integer())->list(). 
+get_size_send(Fields_iolist,Length_max_size)->
+	Final_length = erlang:iolist_size(Fields_iolist),
+	string:right(erlang:integer_to_list(Final_length),Length_max_size,$0).
 %%====================================================================
 %% Internal functions
 %%====================================================================

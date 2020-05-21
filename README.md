@@ -16,7 +16,7 @@ The specification can be loaded once and then used for all packing and unpacking
 
 the library can be used by putting the following in your rebar.config as a dep
 ```erlang
-{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"1.0.0"}}}
+{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.5.0"}}}
 ```
 
 
@@ -56,11 +56,6 @@ the library can be used by putting the following in your rebar.config as a dep
 	{ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,<<"12897979987">>),
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Specification),
 	Final_length = iso8583_erl:get_size_send(Mti,Bitmap_final_bit,Fields_list),
-	%% zero padded to a 2 byte header
-	Send_list_final = [<<0,Final_length>>,Mti,Bitmap_final_bit,Fields_list],
-	%%send to interface
-	ok = gen_tcp:send(Socket,Send_list_final),
-	ok = inet:setopts(Socket, [{active, once}]).
 
 
 %unpack data
