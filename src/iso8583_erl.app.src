@@ -9,5 +9,5 @@
   {env,[]},
   {modules, []},
   {licenses, ["MIT"]},
-  {links, [{"https://github.com/nayibor/iso8583_erl"}]}
- ]}.
+  {links, [{"GitHub","https://github.com/nayibor/iso8583_erl"}]}
+]}.
