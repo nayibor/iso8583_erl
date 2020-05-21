@@ -21,8 +21,7 @@ end_per_suite(_) ->
 
 
 init_per_testcase(_, Config) ->
-	Spec_path = filename:join(?config(data_dir,Config),?config(spec_path, Config)),	
-	ct:pal("~n Spec path is ~p",[Spec_path]),
+	Spec_path = filename:join(?config(data_dir,Config),?config(spec_path, Config)),
     Specification = iso8583_erl:load_specification(Spec_path),
     [{spec,Specification} | Config].
 
