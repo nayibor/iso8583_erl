@@ -1,6 +1,6 @@
 %%%
-%%% @doc iso8583_ascii module.
-%%%<br>this module is responsible for processing string iso messages  format</br>
+%%% @doc iso8583_process module.
+%%%<br>this module is responsible for processing is8583 messages </br>
 %%% @end
 %%% @copyright Nuku Ameyibor <nayibor@startmail.com>
 
@@ -27,7 +27,6 @@ fold_bin(Fun, Accum, Bin) ->
 
 %% @doc this is for padding a binary up to a length of N digits with a binary character
 %%mostly used in the bitmap
-%%pad character size <2
 -spec pad_data(binary(),integer(),binary())->binary().
 pad_data(Bin,Number,Character)when is_binary(Bin),is_integer(Number),Number > 0,is_binary(Character),size(Character)<2 -> pad_data(Bin,Number,Character,Number-size(Bin)).
 pad_data(Bin,Number,Character,Counter) when Counter > 0 -> pad_data(<<Character/binary,Bin/binary>>,Number,Character,Counter-1);
@@ -329,8 +328,6 @@ set_mti(Iso_Map,Fld_val)->
 
 
 %% @doc this is for setting a particular field in the message or an mti
-%% field will have to be validated and then after field is validated an entry is created as a map for it 
-%%padding may be added to the field depending on the type of field as well as if its fixed or vlength
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
 set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
