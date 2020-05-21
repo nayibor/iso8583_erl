@@ -10,6 +10,6 @@
   {modules, []},
 
   {maintainers, []},
-  {licenses, []},
-  {links, []}
+  {licenses, ["MIT"]},
+  {links, ["https://github.com/nayibor/iso8583_erl"]}
  ]}.
