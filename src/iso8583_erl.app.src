@@ -1,13 +1,9 @@
-{application, iso8583_erl,
- [{description, "An Iso8583 processing library for erlang"},
-  {vsn, "0.2.0"},
-  {registered, []},
-  {applications,
-   [kernel,
-    stdlib
-   ]},
-  {env,[]},
-  {modules, []},
-  {licenses, ["MIT"]},
-  {links, [{"GitHub","https://github.com/nayibor/iso8583_erl"}]}
- ]}.
+{application,iso8583_erl,
+             [{description,"An Iso8583 processing library for erlang"},
+              {vsn,"0.2.0"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[]},
+              {licenses,["MIT"]},
+              {links,[{"GitHub","https://github.com/nayibor/iso8583_erl"}]}]}.
