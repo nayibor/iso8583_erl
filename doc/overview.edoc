@@ -1,0 +1,128 @@
+** this is the overview.doc file for the library application 'iso8583_erl' **
+@author Nuku Ameyibor <nayibor@gmail.com>
+@copyright 2020  Nuku Ameyibor
+@version 0.2.0
+@title Welcome to the iso8583_erl application
+@doc
+<p>An erlang library for processing iso8583 messages inspired by <a href="https://github.com/mgwidmann/erl8583">erl8583</a>,<a href="https://github.com/jpos/jPOS">jpos library</a>.</p>
+<p>
+This is a minimalist library for packing and unpacking iso8583 financial messages.
+</p>
+<p>
+It accepts a specification file which contains information about fields,mti,bitmap for your interchange.
+</p>
+<p>
+It then uses those specifications to then pack and unpack iso messages for your interchange.
+</p>
+<p>
+The specification can be loaded once and then used for all packing and unpacking operations
+</p>
+<h3 class="function">usage</h3>
+<p>
+the library can be used by putting the following in your rebar.config as a dep
+</p>
+<p>
+<div class="spec">
+{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.2.0"}}}
+</div>
+</p>
+<h3 class="function">quickstart</h3>
+
+<div class="spec">
+	<p>
+		<tt>%set mti</tt>
+	</p>
+	<p>
+	Specification = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/custom.cfg"),
+	</p>
+	<p>
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),&lt;&lt;"0200"&gt;&gt;),
+	</p>
+	<p>
+		<tt>%set field</tt>
+	</p>
+	<p>
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,&lt;&lt;"201234"&gt;&gt;),
+	</p>
+	<p>
+		<tt>%pack data</tt>
+	</p>
+	<p>
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),&lt;&lt;"0200"&gt;&gt;),
+	</p>
+	<p>
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,&lt;&lt;"201234"&gt;&gt;),
+	</p>
+	<p>
+	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,&lt;&lt;"4.5"&gt;&gt;),
+	</p>
+	<p>
+	{ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,&lt;&lt;"5000"&gt;&gt;),
+	</p>
+	<p>
+	{ok,Fifth_map} = iso8583_erl:set_field(Fourth_map,102,&lt;&lt;"123413243"&gt;&gt;),
+	</p>
+	<p>
+	{ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,&lt;&lt;"12897979987"&gt;&gt;),
+	</p>
+	<p>
+	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Specification),
+	</p>
+	<p>
+		<tt>%unpack data</tt>
+	</p>
+	<p>
+	{ok,First_map} = iso8583_erl:set_mti(maps:new(),&gt;&gt;"0200"&gt;&gt;),
+	</p>
+	
+	<p>
+	{ok,Second_map} = iso8583_erl:set_field(First_map,3,&gt;&gt;"001234"&gt;&gt;),
+	</p>
+	
+	<p>
+	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,&gt;&gt;"123456789012"&gt;&gt;),
+	</p>
+	
+	<p>
+	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Fourth_map,Specification),
+	</p>
+	
+	<p>
+	Final_fields = [Mti,Bitmap_final_bit,Fields_list],
+	</p>
+	
+	<p>
+	Map_data = #{3 => &gt;&gt;"001234"&gt;&gt;,4 => &gt;&gt;"123456789012"&gt;&gt;,5 => &gt;&gt;"123456789012"&gt;&gt;,
+    bit => &gt;&gt;"3800000000000000"&gt;&gt;,mti => &gt;&gt;"0200"&gt;&gt;},	</p>
+	
+	<p>
+	?assertEqual(true,Map_data =:= iso8583_erl:unpack(Final_fields,Specification)).
+	</p>
+	
+</div>
+<h3 class="function">further examples</h3>
+<p>
+more examples of usage can be found in 
+<p>
+<div class="spec">
+test/iso8583_erl_SUITE.erl
+</div>
+</p>
+</p>
+
+<h3 class="function">to create documentation</h3>
+<p>
+to create documentation run command below
+</p>
+<p>
+<div class="spec">
+rebar3 edoc
+</div>
+</p>
+<h3 class="function">ackowledgement</h3>
+<p>
+i wish to thank the creators of the jpos library from which gave a lot of great ideas.
+</p>
+<p>
+i also wish to thank the creators of erl8583 library which gave a lot of excellent ideas.
+</p>
