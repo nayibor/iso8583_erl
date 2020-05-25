@@ -81,7 +81,7 @@ the library can be used by putting the following in your rebar.config as a dep
 	
 	<p>
 	{ok,Third_map} = iso8583_erl:set_field(Second_map,4,&gt;&gt;"123456789012"&gt;&gt;),
-	</p>	
+	</p>
 	<p>
 	[Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:unpack(Fourth_map,Specification),
 	</p>
