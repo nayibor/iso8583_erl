@@ -19,6 +19,7 @@ the library can be used by putting the following in your rebar.config as a dep
 {iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.2.0"}}}
 ```
 
+It is also available on [hex]
 
 ## quickstart ##
 ```erlang
@@ -77,3 +78,4 @@ i also wish to thank the creators of erl8583 library which gave a lot of excelle
 
 [erl8583]: https://github.com/mgwidmann/erl8583
 [jpos library]: https://github.com/jpos/jPOS
+[hex]: https://hex.pm/packages/iso8583_erl
