@@ -1,14 +1,16 @@
 %%%
-%%% @doc iso8583_process module.
-%%%<br>this module is responsible for processing is8583 messages </br>
+%%% @doc iso8583_ascii module.
+%%%<br>this module is responsible for processing string iso messages  format</br>
 %%% @end
 %%% @copyright Nuku Ameyibor <nayibor@startmail.com>
 
 
 -module(iso8583_process).
 
--export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,pad_data/3,process_data_element/4,create_bitmap/2,
-		get_bitmap_subs/3,get_size/2,convert_base_pad/3,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1
+-export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,process_data_element/4,create_bitmap/2,
+		get_bitmap_subs/3,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1,
+		convert_base_pad/3,load_specification_mti/1,get_spec_mti/3,check_mandatory_fields/2,
+		add_echo_fields/3
 		]).
 
 
@@ -24,28 +26,12 @@ fold_bin(Fun, Accum, Bin) ->
 		{NewBin, NewAccum} = Fun(Bin, Accum),
 		fold_bin(Fun, NewAccum, NewBin).
 
-
-%% @doc this is for padding a binary up to a length of N digits with a binary character
-%%mostly used in the bitmap
--spec pad_data(binary(),integer(),binary())->binary().
-pad_data(Bin,Number,Character)when is_binary(Bin),is_integer(Number),Number > 0,is_binary(Character),size(Character)<2 -> pad_data(Bin,Number,Character,Number-size(Bin)).
-pad_data(Bin,Number,Character,Counter) when Counter > 0 -> pad_data(<<Character/binary,Bin/binary>>,Number,Character,Counter-1);
-pad_data(Bin,_Number,_Character,Counter) when Counter =< 0 -> Bin.
-
-
-%% @doc  integer binary containing bitmap
--spec convert_base(integer())->binary().
-convert_base(Data_Base_10)->
-		erlang:integer_to_binary(Data_Base_10,2).
-				
 	  	
 %% @doc this converts data between bases and also pads the data  for our purposes
 -spec convert_base_pad(integer(),integer(),binary())->binary().
 convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
-        Data_base2 = convert_base(Data_Base_10),
-		pad_data(Data_base2,Number_pad,Pad_digit).
-
-
+        Data_base2 = erlang:integer_to_binary(Data_Base_10,2),
+        pad_data_new(Data_base2,Number_pad,Pad_digit,right).
 
 
 %% @doc creats a new map specification which contains the various data elements and a bitmap from a specification file
@@ -58,12 +44,74 @@ load_specification(Filename)->
 			case Key of 
 				bitmap_type->
 					maps:put(bitmap_type,Value,Acc);
-				Number when Number >=1,Number =<128 ->
+				Number when Number >=1,Number =<128,is_integer(Number) ->
 					#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
-					maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc)
+					maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
+				_ ->
+					Acc
 			end
 		end,Map_spec,Spec_data).
+
+
+%% @doc this is for loading field information for mtis
+-spec load_specification_mti(string() |binary())->map().
+load_specification_mti(Filename)->
+		{ok,Spec_data} = file:consult(Filename),
+		Map_spec = maps:new(),
+		lists:foldl(
+		 fun({Key,Value},Acc)->
+			case Key of 
+				Key_value when is_binary(Key_value),size(Key_value)=:=4 ->
+					Key_list = maps:keys(Value),	
+					Result =  lists:map(fun(Key_mti)->lists:member(Key_mti,Key_list) end,[mand,opti,echo,condi,snno,snrr]),
+					case  lists:member(false,Result) of
+						true ->
+							throw(error);
+						 false ->
+								maps:put(Key_value,Value,Acc)
+					end;	
+				_ ->
+					Acc
+			end
+		end,Map_spec,Spec_data).		 
+
+
+%% @doc for checking mandatory fields
+-spec check_mandatory_fields(list(),map())->true|false.
+check_mandatory_fields(List_mandatory_keys,Iso_map)->
+	Map_fields = maps:keys(Iso_map),
+	Result =  lists:map(fun(Field_mand)->lists:member(Field_mand,Map_fields) end,List_mandatory_keys),
+	case lists:member(false,Result) of
+		true ->
+			false;
+		false ->
+			true
+	end.
+		
+
+%% @doc for adding fields which are supposed to be echoed
+-spec add_echo_fields(map(),map(),map())->map().
+add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
+	{ok,Mti}  = get_field(mti,Map_recipient),
+	List_echo_fields = get_spec_mti(echo,Mti,Specification_mti),
+	lists:foldl(
+	fun(Field,Acc)->
+		case maps:get(Field,Map_transaction,error) of 
+			error ->
+				Acc;
+			Field_value ->
+				maps:put(Field,Field_value, Acc)
+		end
+	end,Map_recipient,List_echo_fields).
+	
+	
+
+%% @doc for getting various specification types
+-spec get_spec_mti(atom(),binary(),map())->list()|error.
+get_spec_mti(Spec_type,Mti,Spec_field_map)->		
+	Spec_mti = maps:get(Mti,Spec_field_map),
+	maps:get(Spec_type,Spec_mti).
 
 
 %% @doc finds out if a field is fixed length or variable lengt
@@ -108,7 +156,7 @@ process_binary(Bin_message,Specification)->
 		maps:merge(Result_process,Map_Init).
 
 
-%%for processing the message given the bitmap and the binary containing the data elements
+%% @doc for processing the message given the bitmap and the binary containing the data elements
 -spec process_data_element(binary(),integer(),binary(),map())->map().
 process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 		Map_Init = maps:new(),
@@ -154,7 +202,7 @@ pack(Message_Map,Specification)->
 		end.
 
 
-%%creates a primary/secondary bitmap out of message map and specification
+%% @doc creates a primary/secondary bitmap out of message map and specification
 -spec pack_message(primary|secondary,map(),map())->iolist().
 pack_message(primary,Message_Map,Specification)-> 
 		{Bitmap_final,Iso_Fields_Binary} = lists:foldl((pack_check_keys(Message_Map,Specification)) ,{<<>>,[]},lists:seq(2,64)),
@@ -174,7 +222,7 @@ pack_message(secondary,Message_Map,Specification)->
 		[Mti,Bitmap_final_bit_list,Fields_list].
 
 
-%%used for setting the bitmap fields for each field based on whether the key exists or not
+%% @doc used for setting the bitmap fields for each field based on whether the key exists or not
 %%returns anonymous  function which is used for setting up the bitmap
 -spec pack_check_keys(maps:iterator()|map(),maps:iterator()|map())->fun().
 pack_check_keys(Message_Map,Specification)->
@@ -228,7 +276,7 @@ get_bitmap_subs(hex,Bin_message,Specification)->
 
 
 
-%%for creating the final bitmap
+%% @doc for creating the final bitmap
 %%this bitmap is an 8/16 byte binary with each byte being represented  by an integer.
 %%integer converted to a an 2 bit binary represents presence or absence of those fields
 -spec create_bitmap(binary|hex,binary())->binary()|list().
@@ -258,58 +306,58 @@ create_bitmap(hex,Bitmap_final_bit)->
 		lists:append(lists:reverse(Bitmap_hex)).
 
 
-%%this will be used for formatting the data which is sent 
+
+%% @doc this will be used for formatting the data which is sent 
 %%it is done at the setting stage
 %%it checks if data is of the correct length and type for numbers and simple strings and binaries
 %%%also adds paddings and as well as headers to the various values
 %%not full featured but just enough to make it work
--spec format_data(integer()|mti,term(),map())->{ok,term()}|{error,term()}.
+-spec format_data(integer()|mti,term(),map())->{ok,term()}.
 format_data(Key,Value,Specification)->
 		{Flength,Fx_var_fixed,Fx_header_length,Sub_format,{Pad_info,Pad_char}}  = get_spec_field(Key,Specification),
-		pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Value,Sub_format,Pad_char,Pad_info).
+		pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Value,Pad_char,Sub_format,Pad_info).
 
 
 
-%% @doc for checking if data type is of binary so it can be changed to  string if not
--spec check_binary_spec(binary(),list())->binary()|list().
-check_binary_spec(Data,Sub_format)->
-	case Sub_format of
+%% @doc for changing input binary to string based on the data type 
+-spec change_binary_string(binary(),term())->binary()|string().
+change_binary_string(Input_binary,Data_type)->
+	case Data_type of
 		"B"->
-			Data;
+			Input_binary;
 		_ ->
-			erlang:binary_to_list(Data)
+			erlang:binary_to_list(Input_binary)
 	end.
-		
 
 %%for padding various fields based on whether its a variable length field or a fixed length field
--spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),list(),char()|atom()|binary(),atom())->{ok,list()}|{ok,binary()}|{error,term()}.
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Sub_format,Pad_char,none)->
+-spec pad_data_check(fx|vl,integer(),integer(),binary()|list(),char()|atom()|binary(),term(),atom())->{ok,list()}|{ok,binary()}.
+pad_data_check(Fx_var_fixed,Fx_header_length,_Flength,Numb_check,_Pad_char,Sub_format,none)->
 		case Fx_var_fixed of 
 			fx->
-				{ok,check_binary_spec(Numb_check,Sub_format)};
+				{ok,change_binary_string(Numb_check,Sub_format)};
 			vl->
 				Size =  erlang:size(Numb_check),
 				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-				Final_binary = [Fsize,check_binary_spec(Numb_check,Sub_format)],
-				{ok,Final_binary}
+				Final_list = [Fsize,change_binary_string(Numb_check,Sub_format)],
+				{ok,Final_list}
 		end;
 
 
-pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Sub_format,Char_pad,Pad_direction)->
+pad_data_check(Fx_var_fixed,Fx_header_length,Flength,Numb_check,Char_pad,Sub_format,Pad_direction)->
 		case Fx_var_fixed of 
 			fx->
 				Padded_data = pad_data_new(Numb_check,Flength,Char_pad,Pad_direction),
-				{ok,check_binary_spec(Padded_data,Sub_format)};
+				{ok,change_binary_string(Padded_data,Sub_format)};
 			vl->
 				Size =  erlang:size(Numb_check),
 				Fsize = string:right(erlang:integer_to_list(Size),Fx_header_length,$0),							
-				Final_binary = [Fsize,check_binary_spec(Numb_check,Sub_format)],
-				{ok,Final_binary}
+				Final_list = [Fsize,change_binary_string(Numb_check,Sub_format)],
+				{ok,Final_list}
 		end.
 
 
 %%for padding a binary up to a certain length with one string character or binary character
--spec pad_data_new(binary(),non_neg_integer(),char()|<<_:8>>,left|right)->{ok,string()|binary()}.
+-spec pad_data_new(binary(),non_neg_integer(),binary(),left|right)->binary().
 pad_data_new(Numb_check,Flength,Binary_char_pad,Pad_direction)->
 		Pad_size = Flength-size(Numb_check),
 		Pad_info = binary:copy(Binary_char_pad,Pad_size),
@@ -322,12 +370,14 @@ pad_data_new(Numb_check,Flength,Binary_char_pad,Pad_direction)->
 
 
 %%this is a special setting for setting the mti of a message
--spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}|{error,term()}.
+-spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}.
 set_mti(Iso_Map,Fld_val)->
 		{ok,maps:put(mti,Fld_val,Iso_Map)}.
 
 
 %% @doc this is for setting a particular field in the message or an mti
+%% field will have to be validated and then after field is validated an entry is created as a map for it 
+%%padding may be added to the field depending on the type of field as well as if its fixed or vlength
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
 set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
@@ -363,33 +413,9 @@ get_field(Fld_num,Iso_Map)->
 		end.
 
 
-%%for calculating size of bitmap or field list
--spec get_size(bitmap:atom(),binary()|list())->integer().
-get_size(bitmap,Bitmap)->
-		case {is_list(Bitmap),is_binary(Bitmap)} of 
-			{true,_}->
-				length(Bitmap);
-			{_,true}->
-				size(Bitmap)
-		end;
-
-
-get_size(field_list,Fields_list)->
-	lists:foldl(
-	fun(X,Acc)->
-		case X of
-			[Length,Value]->
-				Acc+erlang:list_to_integer(Length);
-			Value ->
-				Acc+size(X)
-		end
-	end,0,Fields_list).
-
-
 %%for getting the final size of the message to be sent 
 %%-spec get_size_send(binary(),binary()|list(),list())->non_neg_integer().
 -spec get_size_send(iolist(),non_neg_integer())->list(). 
 get_size_send(Fields_iolist,Length_max_size)->
 	Final_length = erlang:iolist_size(Fields_iolist),
 	string:right(erlang:integer_to_list(Final_length),Length_max_size,$0).
-
