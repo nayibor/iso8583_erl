@@ -10,7 +10,7 @@
 -export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,process_data_element/4,create_bitmap/2,
 		get_bitmap_subs/3,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1,
 		convert_base_pad/3,load_specification_mti/1,get_spec_mti/3,check_mandatory_fields/2,
-		add_echo_fields/3
+		add_echo_fields/3,validate_specification/1
 		]).
 
 
@@ -35,7 +35,8 @@ convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
 
 
 %% @doc creats a new map specification which contains the various data elements and a bitmap from a specification file
--spec load_specification(string() |binary())->map().
+%% @doc can throw an error if there are bugs in the specification
+-spec load_specification(string() |binary())->map() .
 load_specification(Filename)->
 		{ok,Spec_data} = file:consult(Filename),
 		 Map_spec = maps:new(),
@@ -47,7 +48,12 @@ load_specification(Filename)->
 				Number when Number >=1,Number =<128,is_integer(Number) ->
 					#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
-					maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
+					case validate_specification(Value) of
+						true ->
+							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
+						false ->
+							throw(<<"check specification file for correct field configurations">>)
+					end;
 				_ ->
 					Acc
 			end
@@ -77,41 +83,56 @@ load_specification_mti(Filename)->
 		end,Map_spec,Spec_data).		 
 
 
+validate_specification(Spec_info)->
+		#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Spec_info,	
+		%%io:format("~nValue is ~p",[Spec_info]),
+		{Padleft,Padright} = Pad_info,
+		%%Pacharlength = size(Padright),
+		Fl_vl = fixed_variable(Header_length),
+		case  {Fl_vl,{Padleft,Padright}} of
+			{vl,{none,none}}->true;
+			{fx,{none,none}} -> true;
+			{fx,{left,Padright}} when is_binary(Padright)  -> true;
+			{fx,{right,Padright}} when is_binary(Padright) -> true;
+			_ -> false
+		end.
+
+
 %% @doc for checking mandatory fields
 -spec check_mandatory_fields(list(),map())->true|false.
 check_mandatory_fields(List_mandatory_keys,Iso_map)->
-	Map_fields = maps:keys(Iso_map),
-	Result =  lists:map(fun(Field_mand)->lists:member(Field_mand,Map_fields) end,List_mandatory_keys),
-	case lists:member(false,Result) of
-		true ->
-			false;
-		false ->
-			true
-	end.
+		Map_fields = maps:keys(Iso_map),
+		Result =  lists:map(fun(Field_mand)->lists:member(Field_mand,Map_fields) end,List_mandatory_keys),
+		case lists:member(false,Result) of
+			true ->
+				false;
+			false ->
+				true
+		end.
 		
 
 %% @doc for adding fields which are supposed to be echoed
 -spec add_echo_fields(map(),map(),map())->map().
 add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
-	{ok,Mti}  = get_field(mti,Map_recipient),
-	List_echo_fields = get_spec_mti(echo,Mti,Specification_mti),
-	lists:foldl(
-	fun(Field,Acc)->
-		case maps:get(Field,Map_transaction,error) of 
-			error ->
-				Acc;
-			Field_value ->
-				maps:put(Field,Field_value, Acc)
-		end
-	end,Map_recipient,List_echo_fields).
+		{ok,Mti}  = get_field(mti,Map_recipient),
+		List_echo_fields = get_spec_mti(echo,Mti,Specification_mti),
+		lists:foldl(
+		fun(Field,Acc)->
+			case maps:get(Field,Map_transaction,error) of 
+				error ->
+					Acc;
+				Field_value ->
+					maps:put(Field,Field_value, Acc)
+			end
+		end,Map_recipient,List_echo_fields).
 	
 	
 
 %% @doc for getting various specification types
 -spec get_spec_mti(atom(),binary(),map())->list()|error.
 get_spec_mti(Spec_type,Mti,Spec_field_map)->		
-	Spec_mti = maps:get(Mti,Spec_field_map),
-	maps:get(Spec_type,Spec_mti).
+		Spec_mti = maps:get(Mti,Spec_field_map),
+		maps:get(Spec_type,Spec_mti).
 
 
 %% @doc finds out if a field is fixed length or variable lengt
@@ -123,13 +144,13 @@ fixed_variable(Number) when Number > 0,is_integer(Number)->vl.
 %% @doc gets the specification for a particular field
 -spec get_spec_field(non_neg_integer()|mti,map())->tuple().
 get_spec_field(Field,Specification)->
-	maps:get(Field,Specification).
+		maps:get(Field,Specification).
 
 
 %% @doc gets the bitmap type
 -spec get_bitmap_type(map())->atom().
 get_bitmap_type(Specification)->
-	maps:get(bitmap_type,Specification).
+		maps:get(bitmap_type,Specification).
 
 
 %% @doc this part accepts a list iso message with the header removed and extracts the mti,bitmap,data elements into a map object 
