@@ -52,6 +52,7 @@ load_specification(Filename)->
 						true ->
 							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
 						false ->
+							io:format("~nCheck Spec Fields below ~p",[Value]),
 							throw(<<"check specification file for correct field configurations">>)
 					end;
 				_ ->
@@ -85,15 +86,15 @@ load_specification_mti(Filename)->
 
 validate_specification(Spec_info)->
 		#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Spec_info,	
-		%%io:format("~nValue is ~p",[Spec_info]),
+		%%io:format("~nValue is ~p,check header",[Spec_info]),
 		{Padleft,Padright} = Pad_info,
 		%%Pacharlength = size(Padright),
 		Fl_vl = fixed_variable(Header_length),
-		case  {Fl_vl,{Padleft,Padright}} of
-			{vl,{none,none}}->true;
-			{fx,{none,none}} -> true;
-			{fx,{left,Padright}} when is_binary(Padright)  -> true;
-			{fx,{right,Padright}} when is_binary(Padright) -> true;
+		case  {Fl_vl,{Padleft,Padright},(is_integer(Header_length) andalso Header_length >=0),(is_integer(Length_field) andalso Length_field >=0)} of
+			{vl,{none,none},true,true}->true;
+			{fx,{none,none},true,true} -> true;
+			{fx,{left,Padright},true,true} when is_binary(Padright)  -> true;
+			{fx,{right,Padright},true,true} when is_binary(Padright) -> true;
 			_ -> false
 		end.
 
