@@ -52,7 +52,7 @@ load_specification(Filename)->
 						true ->
 							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
 						false ->
-							io:format("~nCheck Spec Fields below",[Value]),
+							io:format("~nCheck Spec Fields below ~p",[Value]),
 							throw(<<"check specification file for correct field configurations">>)
 					end;
 				_ ->
