@@ -44,7 +44,14 @@ load_specification(Filename)->
 		 fun({Key,Value},Acc)->
 			case Key of 
 				bitmap_type->
-					maps:put(bitmap_type,Value,Acc);
+					case Value of
+						hex ->
+							maps:put(bitmap_type,Value,Acc);
+						binary ->
+							maps:put(bitmap_type,Value,Acc);
+						_ ->
+							throw(<<"Bitmap type value can only be hex or binary">>)						
+					end;
 				Number when Number >=1,Number =<128,is_integer(Number) ->
 					#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
 					Fl_vl = fixed_variable(Header_length),
@@ -53,7 +60,7 @@ load_specification(Filename)->
 							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
 						false ->
 							io:format("~nCheck Spec Fields below ~p",[Value]),
-							throw(<<"check specification file for correct field configurations">>)
+							throw(<<"Check specification file for correct field configurations">>)
 					end;
 				_ ->
 					Acc
