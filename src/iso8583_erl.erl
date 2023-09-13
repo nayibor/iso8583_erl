@@ -48,7 +48,7 @@ add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
 
 
 %% @doc for getting various specification types
--spec get_spec_mti(atom(),binary(),map())->list()|error.
+-spec get_spec_mti(atom(),map(),map())->list()|error.
 get_spec_mti(Spec_type,Mti,Spec_field_map)->
 	iso8583_process:get_spec_mti(Spec_type,Mti,Spec_field_map).
 
