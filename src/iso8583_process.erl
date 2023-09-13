@@ -92,7 +92,7 @@ load_specification_mti(Filename)->
 
 
 validate_specification(Spec_info)->
-		#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Spec_info,	
+		#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=_Format} = Spec_info,	
 		%%io:format("~nValue is ~p,check header",[Spec_info]),
 		{Padleft,Padright} = Pad_info,
 		%%Pacharlength = size(Padright),
@@ -137,7 +137,7 @@ add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
 	
 
 %% @doc for getting various specification types
--spec get_spec_mti(atom(),binary(),map())->list()|error.
+-spec get_spec_mti(atom(),map(),map())->list()|error.
 get_spec_mti(Spec_type,Mti,Spec_field_map)->		
 		Spec_mti = maps:get(Mti,Spec_field_map),
 		maps:get(Spec_type,Spec_mti).
@@ -431,7 +431,7 @@ set_field_list(List)->
 
 
 %% @doc this is for getting a particular field in an iso message back
--spec get_field(Fld_num::pos_integer()|binary(),Iso_Map::map())->{ok,term()}|error.
+-spec get_field(Fld_num::pos_integer()|binary()|mti,Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->
 		Val_field = maps:get(Fld_num,Iso_Map,error),
 		case Val_field of
