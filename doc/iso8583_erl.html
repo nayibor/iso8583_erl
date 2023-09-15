@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module iso8583_erl</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module iso8583_erl</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_echo_fields-3">add_echo_fields/3</a></td><td>for adding fields which are supposed to be echoed.</td></tr>
+<tr><td valign="top"><a href="#check_mandatory_fields-2">check_mandatory_fields/2</a></td><td>for checking mandatory fields.</td></tr>
+<tr><td valign="top"><a href="#create_bitmap-2">create_bitmap/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_bitmap_subs-3">get_bitmap_subs/3</a></td><td>forr getting the bitmap,mti,Data fields.</td></tr>
+<tr><td valign="top"><a href="#get_bitmap_type-1">get_bitmap_type/1</a></td><td>gets the bitmap type.</td></tr>
+<tr><td valign="top"><a href="#get_field-2">get_field/2</a></td><td>this is for getting a particular field in an iso message back.</td></tr>
+<tr><td valign="top"><a href="#get_size_send-2">get_size_send/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_spec_field-2">get_spec_field/2</a></td><td>gets the specification for a particular field.</td></tr>
+<tr><td valign="top"><a href="#get_spec_mti-3">get_spec_mti/3</a></td><td>for getting various specification types.</td></tr>
+<tr><td valign="top"><a href="#load_specification-1">load_specification/1</a></td><td>creats a new map specification which contains the various data elements and a bitmap from a specification file.</td></tr>
+<tr><td valign="top"><a href="#load_specification_mti-1">load_specification_mti/1</a></td><td>this is for loading field information for mtis.</td></tr>
+<tr><td valign="top"><a href="#pack-2">pack/2</a></td><td>for packing messages into iso list format.</td></tr>
+<tr><td valign="top"><a href="#process_data_element-4">process_data_element/4</a></td><td>for processing the message given the bitmap and the binary containing the data elements.</td></tr>
+<tr><td valign="top"><a href="#set_field-3">set_field/3</a></td><td>for setting the fields for an iso message.</td></tr>
+<tr><td valign="top"><a href="#set_field_list-1">set_field_list/1</a></td><td>for setting the fields but accepts a list of fields and returns a map containing output.</td></tr>
+<tr><td valign="top"><a href="#set_mti-2">set_mti/2</a></td><td>for setting the fields for an iso message.</td></tr>
+<tr><td valign="top"><a href="#unpack-2">unpack/2</a></td><td>for unpacking messages.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_echo_fields-3">add_echo_fields/3</a></h3>
+<div class="spec">
+<p><tt>add_echo_fields(Map_transaction::map(), Map_recipient::map(), Specification_mti::map()) -&gt; map()</tt><br></p>
+<p> </p>
+</div><p>for adding fields which are supposed to be echoed</p>
+
+<h3 class="function"><a name="check_mandatory_fields-2">check_mandatory_fields/2</a></h3>
+<div class="spec">
+<p><tt>check_mandatory_fields(List_mandatory_keys::list(), Map_fields::map()) -&gt; true | false</tt><br></p>
+<p> </p>
+</div><p>for checking mandatory fields</p>
+
+<h3 class="function"><a name="create_bitmap-2">create_bitmap/2</a></h3>
+<div class="spec">
+<p><tt>create_bitmap(Type_bitmap::binary | hex, Bitmap_final_bit::binary()) -&gt; binary() | list()</tt><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="get_bitmap_subs-3">get_bitmap_subs/3</a></h3>
+<div class="spec">
+<p><tt>get_bitmap_subs(Bitmap_type::atom(), Bin_message::binary(), Specification::map()) -&gt; tuple()</tt><br></p>
+<p> </p>
+</div><p>forr getting the bitmap,mti,Data fields</p>
+
+<h3 class="function"><a name="get_bitmap_type-1">get_bitmap_type/1</a></h3>
+<div class="spec">
+<p><tt>get_bitmap_type(Specification::map()) -&gt; hex | binary</tt><br></p>
+<p> </p>
+</div><p>gets the bitmap type</p>
+
+<h3 class="function"><a name="get_field-2">get_field/2</a></h3>
+<div class="spec">
+<p><tt>get_field(Fld_num::pos_integer() | binary(), Iso_Map::map()) -&gt; {ok, term()} | error</tt><br></p>
+<p> </p>
+</div><p>this is for getting a particular field in an iso message back</p>
+
+<h3 class="function"><a name="get_size_send-2">get_size_send/2</a></h3>
+<div class="spec">
+<p><tt>get_size_send(Fields_iolist::iolist(), Length_max_size::non_neg_integer()) -&gt; list()</tt><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="get_spec_field-2">get_spec_field/2</a></h3>
+<div class="spec">
+<p><tt>get_spec_field(Field::non_neg_integer(), Specification::map()) -&gt; tuple()</tt><br></p>
+<p> </p>
+</div><p>gets the specification for a particular field</p>
+
+<h3 class="function"><a name="get_spec_mti-3">get_spec_mti/3</a></h3>
+<div class="spec">
+<p><tt>get_spec_mti(Spec_type::atom(), Mti::map(), Spec_field_map::map()) -&gt; list() | error</tt><br></p>
+<p> </p>
+</div><p>for getting various specification types</p>
+
+<h3 class="function"><a name="load_specification-1">load_specification/1</a></h3>
+<div class="spec">
+<p><tt>load_specification(Filename::string() | binary()) -&gt; map()</tt><br></p>
+<p> </p>
+</div><p>creats a new map specification which contains the various data elements and a bitmap from a specification file</p>
+
+<h3 class="function"><a name="load_specification_mti-1">load_specification_mti/1</a></h3>
+<div class="spec">
+<p><tt>load_specification_mti(Filename::string() | binary()) -&gt; map()</tt><br></p>
+<p> </p>
+</div><p>this is for loading field information for mtis</p>
+
+<h3 class="function"><a name="pack-2">pack/2</a></h3>
+<div class="spec">
+<p><tt>pack(Map_pack, Specification) -&gt; list()</tt>
+<ul class="definitions"><li><tt>Map_pack = map()</tt></li><li><tt>Specification = map()</tt></li></ul></p>
+<p> </p>
+</div><p>for packing messages into iso list format</p>
+
+<h3 class="function"><a name="process_data_element-4">process_data_element/4</a></h3>
+<div class="spec">
+<p><tt>process_data_element(Bitmap::binary(), Index_start::integer(), Data_binary::binary(), Specification::map()) -&gt; map()</tt><br></p>
+<p> </p>
+</div><p>for processing the message given the bitmap and the binary containing the data elements</p>
+
+<h3 class="function"><a name="set_field-3">set_field/3</a></h3>
+<div class="spec">
+<p><tt>set_field(Iso_Map::map(), Fld_num::pos_integer(), Fld_val::term()) -&gt; {ok, map()}</tt><br></p>
+<p> </p>
+</div><p>for setting the fields for an iso message</p>
+
+<h3 class="function"><a name="set_field_list-1">set_field_list/1</a></h3>
+<div class="spec">
+<p><tt>set_field_list(List::list()) -&gt; map()</tt><br></p>
+<p> </p>
+</div><p>for setting the fields but accepts a list of fields and returns a map containing output</p>
+
+<h3 class="function"><a name="set_mti-2">set_mti/2</a></h3>
+<div class="spec">
+<p><tt>set_mti(Iso_Map::map(), Fld_val::term()) -&gt; {ok, map()}</tt><br></p>
+<p> </p>
+</div><p>for setting the fields for an iso message</p>
+
+<h3 class="function"><a name="unpack-2">unpack/2</a></h3>
+<div class="spec">
+<p><tt>unpack(IsoMessage, Specification) -&gt; map()</tt>
+<ul class="definitions"><li><tt>IsoMessage = [integer()]</tt></li><li><tt>Specification = map()</tt></li></ul></p>
+<p> </p>
+</div><p>for unpacking messages</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

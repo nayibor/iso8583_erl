@@ -35,7 +35,7 @@ convert_base_pad(Data_Base_10,Number_pad,Pad_digit)->
 
 
 %% @doc creats a new map specification which contains the various data elements and a bitmap from a specification file
-%% @doc can throw an error if there are bugs in the specification
+%% can throw an error if there are bugs in the specification
 -spec load_specification(string() |binary())->map() .
 load_specification(Filename)->
 		{ok,Spec_data} = file:consult(Filename),
