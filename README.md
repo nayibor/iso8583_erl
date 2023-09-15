@@ -16,7 +16,7 @@ The specification can be loaded once and then used for all packing and unpacking
 
 the library can be used by putting the following in your rebar.config as a dep
 ```erlang
-{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"1.0.0"}}}
+{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.4.0"}}}
 ```
 
 It is also available on [hex]
