@@ -1,3 +1,0 @@
-%% encoding: UTF-8
-{application,iso8583_erl}.
-{modules,[iso8583_erl,iso8583_process]}.
