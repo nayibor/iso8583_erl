@@ -12,12 +12,12 @@
 %%====================================================================
 
 
-%% @doc creats a new map specification which contains the various data elements and a bitmap from a specification file
+%% @doc creates a new map specification which contains the various data elements and a bitmap from a specification file
 -spec load_specification(string() |binary())->map().
 load_specification(Filename)->
 	iso8583_process:load_specification(Filename).
 
-%% @doc this is for loading field information for mtis
+%% @doc this is for loading field information for the message type indicator(mti)
 -spec load_specification_mti(string() |binary())->map().
 load_specification_mti(Filename)->
 	iso8583_process:load_specification_mti(Filename).
@@ -41,19 +41,19 @@ check_mandatory_fields(List_mandatory_keys,Map_fields)->
 	iso8583_process:check_mandatory_fields(List_mandatory_keys,Map_fields).
 
 
-%% @doc for adding fields which are supposed to be echoed
+%% @doc for adding fields which are supposed to be echoed back to recipient
 -spec add_echo_fields(map(),map(),map())->map().
 add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
 	iso8583_process:add_echo_fields(Map_transaction,Map_recipient,Specification_mti).
 
 
-%% @doc for getting various specification types
+%% @doc for getting specification info about mti
 -spec get_spec_mti(atom(),map(),map())->list()|error.
 get_spec_mti(Spec_type,Mti,Spec_field_map)->
 	iso8583_process:get_spec_mti(Spec_type,Mti,Spec_field_map).
 
 
-%% @doc for packing messages into iso list format
+%% @doc for packing messages into iolist format
 -spec pack(Map_pack,Specification)->list()when
 	Map_pack ::map(),
 	Specification :: map().
@@ -61,17 +61,16 @@ pack(Map_pack,Specification)->
 	iso8583_process:pack(Map_pack,Specification).
 
 
-%% @doc for unpacking messages
+%% @doc for unpacking iso messages from iolist/list into map format
 -spec unpack(IsoMessage,Specification) ->map() when
 	IsoMessage		:: [integer()],
 	Specification  	:: map().
-
 unpack(IsoMessage,Specification)-> 
 	iso8583_process:unpack(IsoMessage,Specification).
 
 
-%% @doc this is for getting a particular field in an iso message back
--spec get_field(Fld_num::pos_integer()|binary(),Iso_Map::map())->{ok,term()}|error.
+%% @doc this is for getting a particular field,mti,bitmap in an iso message back
+-spec get_field(Fld_num::pos_integer()|mti|bit,Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->
 	iso8583_process:get_field(Fld_num,Iso_Map).
 

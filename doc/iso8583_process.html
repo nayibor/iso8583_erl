@@ -24,7 +24,7 @@
  this bitmap is an 8/16 byte binary with each byte being represented  by an integer.</td></tr>
 <tr><td valign="top"><a href="#get_bitmap_subs-3">get_bitmap_subs/3</a></td><td>for getting the bitmap,mti,Data fields.</td></tr>
 <tr><td valign="top"><a href="#get_bitmap_type-1">get_bitmap_type/1</a></td><td>gets the bitmap type.</td></tr>
-<tr><td valign="top"><a href="#get_field-2">get_field/2</a></td><td>this is for getting a particular field in an iso message back.</td></tr>
+<tr><td valign="top"><a href="#get_field-2">get_field/2</a></td><td>this is for getting a particular field or mti or bitmap in an iso message back.</td></tr>
 <tr><td valign="top"><a href="#get_size_send-2">get_size_send/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_spec_field-2">get_spec_field/2</a></td><td>gets the specification for a particular field.</td></tr>
 <tr><td valign="top"><a href="#get_spec_mti-3">get_spec_mti/3</a></td><td>for getting various specification types.</td></tr>
@@ -42,7 +42,7 @@
   it also accepts a specification which will be used for getting the specifications for the message
   exceptions can be thrown here if the string for the message hasnt been formatted well but they should be caught in whichever code is calling the system
  the data is first converted into a binary before the processing is done .</td></tr>
-<tr><td valign="top"><a href="#validate_specification-1">validate_specification/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#validate_specification-1">validate_specification/1</a></td><td>this is for validating a specification.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -87,9 +87,9 @@
 
 <h3 class="function"><a name="get_field-2">get_field/2</a></h3>
 <div class="spec">
-<p><tt>get_field(Fld_num::pos_integer() | binary() | mti, Iso_Map::map()) -&gt; {ok, term()} | error</tt><br></p>
+<p><tt>get_field(Fld_num::pos_integer() | mti | bit, Iso_Map::map()) -&gt; {ok, term()} | error</tt><br></p>
 <p> </p>
-</div><p>this is for getting a particular field in an iso message back</p>
+</div><p>this is for getting a particular field or mti or bitmap in an iso message back</p>
 
 <h3 class="function"><a name="get_size_send-2">get_size_send/2</a></h3>
 <div class="spec">
@@ -127,7 +127,7 @@
 <p><tt>pack(Message_Map::map(), Specification::map()) -&gt; iolist()</tt><br></p>
 <p> </p>
 </div><p>marshalls a message to be sent.
- pack all the differnt elements in a message into an iolist</p>
+ pack all the different elements in a message into an iolist</p>
 
 <h3 class="function"><a name="process_data_element-4">process_data_element/4</a></h3>
 <div class="spec">
@@ -166,9 +166,9 @@
 
 <h3 class="function"><a name="validate_specification-1">validate_specification/1</a></h3>
 <div class="spec">
-<p><tt>validate_specification(Spec_info) -&gt; any()</tt></p>
+<p><tt>validate_specification(Spec_info::map()) -&gt; boolean()</tt><br></p>
 <p> </p>
-</div>
+</div><p>this is for validating a specification</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>

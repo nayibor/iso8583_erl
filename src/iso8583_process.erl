@@ -49,8 +49,8 @@ load_specification(Filename)->
 							maps:put(bitmap_type,Value,Acc);
 						binary ->
 							maps:put(bitmap_type,Value,Acc);
-						_ ->
-							throw(<<"Bitmap type value can only be hex or binary">>)						
+						Any->
+							throw({<<"Bitmap type value can only be hex or binary and not this value">>,Any})						
 					end;
 				Number when Number >=1,Number =<128,is_integer(Number) ->
 					#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=Format} = Value,
@@ -59,8 +59,7 @@ load_specification(Filename)->
 						true ->
 							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
 						false ->
-							io:format("~nCheck Spec Fields below ~p",[Value]),
-							throw(<<"Check specification file for correct field configurations">>)
+							throw({<<"Check specification file for correct field configurations and not this value">>,Value})
 					end;
 				_ ->
 					Acc
@@ -78,10 +77,10 @@ load_specification_mti(Filename)->
 			case Key of 
 				Key_value when is_binary(Key_value),size(Key_value)=:=4 ->
 					Key_list = maps:keys(Value),	
-					Result =  lists:map(fun(Key_mti)->lists:member(Key_mti,Key_list) end,[mand,opti,echo,condi,snno,snrr]),
+					Result =  lists:map(fun(Key_mti)->lists:member(Key_mti,Key_list) end,[mand,opti,echo,condi]),
 					case  lists:member(false,Result) of
 						true ->
-							throw(error);
+							throw(<<"field can only be madatory(mand),optional(opti),echoed(echo),conditional(condi)">>);
 						 false ->
 								maps:put(Key_value,Value,Acc)
 					end;	
@@ -91,6 +90,8 @@ load_specification_mti(Filename)->
 		end,Map_spec,Spec_data).		 
 
 
+%% @doc this is for validating a specification
+-spec validate_specification(map())-> boolean(). 
 validate_specification(Spec_info)->
 		#{pad_info := Pad_info,header_length := Header_length,length_field := Length_field,sub_format:=_Format} = Spec_info,	
 		%%io:format("~nValue is ~p,check header",[Spec_info]),
@@ -217,8 +218,9 @@ process_data_element(Bitmap,Index_start,Data_binary,Specification)->
 		Fldata.
 
 
+%% @TODO Check for mandatory fields which have to be included in every message.
 %% @doc marshalls a message to be sent.
-%%pack all the differnt elements in a message into an iolist
+%%pack all the different elements in a message into an iolist
 -spec pack(Message_Map::map(),map())->iolist().
 pack(Message_Map,Specification)->
 		Pred = fun(Key,_) -> erlang:is_integer(Key) andalso (Key >= 65)  andalso (Key =< 128)  end,
@@ -294,7 +296,8 @@ get_bitmap_subs(hex,Bin_message,Specification)->
 			false -> 32
 		end,
 		<<Mti:Flength/binary,Bitmap_Segment:Bitsize/binary,Rest/binary>> = Bin_message,
-		Bit_mess = fold_bin(
+		Bit_mess = 
+		fold_bin(
 			 fun(<<X:2/binary, Rest_bin/binary>>,Bin_list_final) ->
 				 Base_10  = erlang:binary_to_integer(X,16),
 				 Converted_base  = << (convert_base_pad(Base_10,8,<<"0">>))/binary >>,
@@ -430,8 +433,8 @@ set_field_list(List)->
 		end,First_map,List).
 
 
-%% @doc this is for getting a particular field in an iso message back
--spec get_field(Fld_num::pos_integer()|binary()|mti,Iso_Map::map())->{ok,term()}|error.
+%% @doc this is for getting a particular field or mti or bitmap in an iso message back
+-spec get_field(Fld_num::pos_integer()|mti|bit,Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->
 		Val_field = maps:get(Fld_num,Iso_Map,error),
 		case Val_field of

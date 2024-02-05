@@ -1,32 +1,30 @@
 ** this is the overview.doc file for the library application 'iso8583_erl' **
 @author Nuku Ameyibor <nayibor@gmail.com>
 @copyright 2020  Nuku Ameyibor
-@version 0.2.0
+@version 0.4.0
 @title Welcome to the iso8583_erl application
 @doc
 <p>An erlang library for processing iso8583 messages inspired by <a href="https://github.com/mgwidmann/erl8583">erl8583</a>,<a href="https://github.com/jpos/jPOS">jpos library</a>.</p>
-<p>
-This is a minimalist library for packing and unpacking iso8583 financial messages.
-</p>
-<p>
-It accepts a specification file which contains information about fields,mti,bitmap for your interchange.
-</p>
-<p>
-It then uses those specifications to then pack and unpack iso messages for your interchange.
-</p>
-<p>
-The specification can be loaded once and then used for all packing and unpacking operations
-</p>
+
+<p>This is a minimalist library for packing and unpacking iso8583 financial messages.</p>
+
+<p>It accepts a specification file which contains information about fields,mti,bitmap for your interchange.</p>
+
+<p>It then uses those specifications to then pack and unpack iso messages for your interchange.</p>
+
+<p>The specification can be loaded once and then used for all packing and unpacking operations</p>
+
 <h3 class="function">usage</h3>
 <p>
 the library can be used by putting the following in your rebar.config as a dep
 </p>
 <p>
 <div class="spec">
-{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.2.0"}}}
+{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.4.0"}}}
 </div>
 </p>
 <h3 class="function">quickstart</h3>
+
 
 <div class="spec">
 	<p>
