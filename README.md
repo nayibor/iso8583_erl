@@ -14,12 +14,18 @@ The specification can be loaded once and then used for all packing and unpacking
 
 ## usage ##
 
-the library can be used by putting the following in your rebar.config as a dep
+the library can be used by putting the following in your rebar.config or mix.exs
+
+rebar.config
 ```erlang
 {iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.4.0"}}}
 ```
 
-It is also available on [hex]
+mix.exs
+```elixir
+{:iso8583_erl, "~> 0.4.0"}
+```
+
 
 ## quickstart ##
 ```erlang
@@ -64,7 +70,7 @@ It is also available on [hex]
 
 to create documentation run command below 
 ```erlang
-rebar3 edoc
+rebar3 ex_doc
 ```
 
 
