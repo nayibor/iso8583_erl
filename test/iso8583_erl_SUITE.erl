@@ -99,7 +99,7 @@ process_data_element(Config)->
 	%%for processing an item given an binary showing presence or absence of fields
 	%%,the index to start from from the spec file in a sequential manner  and the specification file
 	Specification =?config(spec, Config),
-	Reponse = iso8583_erl:process_data_element(<<"011100000000000000000000000000000000000000000000000000000000000">>,2,<<"201234123456789012123456789012">>,Specification),
+	Reponse = iso8583_process:process_data_element(<<"011100000000000000000000000000000000000000000000000000000000000">>,2,<<"201234123456789012123456789012">>,Specification),
 	?assertEqual(true,#{3 => <<"201234">>,4 => <<"123456789012">>,5 => <<"123456789012">>} =:= Reponse).
 	
 
@@ -129,5 +129,5 @@ get_bitmap_subs(Config)->
 	{Mti,Binary_bitmap,Message_bitmap,Message_binary_segment} = {<<"0200">>,<<"0011100000000000000000000000000000000000000000000000000000000000">>,
 	<<56,0,0,0,0,0,0,0>>,<<"201234123456789012123456789012">>},
 	Response = 
-	iso8583_erl:get_bitmap_subs(binary,<<48,50,48,48,56,0,0,0,0,0,0,0,50,48,49,50,51,52,49,50,51,52,53,54,55,56,57,48,49,50,49,50,51,52,53,54,55,56,57,48,49,50>>,Specification),
+	iso8583_process:get_bitmap_subs(binary,<<48,50,48,48,56,0,0,0,0,0,0,0,50,48,49,50,51,52,49,50,51,52,53,54,55,56,57,48,49,50,49,50,51,52,53,54,55,56,57,48,49,50>>,Specification),
 	{Mti,Binary_bitmap,Message_bitmap,Message_binary_segment} = Response.
