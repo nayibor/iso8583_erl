@@ -18,12 +18,12 @@ the library can be used by putting the following in your rebar.config or mix.exs
 
 rebar.config
 ```erlang
-{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.4.0"}}}
+{iso8583_erl,{git,"https://github.com/nayibor/iso8583_erl.git",{tag,"0.4.1"}}}
 ```
 
 mix.exs
 ```elixir
-{:iso8583_erl, "~> 0.4.0"}
+{:iso8583_erl, "~> 0.4.1"}
 ```
 
 

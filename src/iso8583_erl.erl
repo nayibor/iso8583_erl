@@ -96,13 +96,14 @@ get_spec_mti(Spec_type,Mti,Spec_field_map)->
 %%
 %% example below
 %%```
-%% 135> {ok,First_map} = iso8583_erl:set_mti(maps:new(),<<"0200">>),
+%% 135>Spec = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/"++"spec.cfg").
+%%  .. {ok,First_map} = iso8583_erl:set_mti(maps:new(),<<"0200">>),
 %%  .. {ok,Second_map} = iso8583_erl:set_field(First_map,3,<<"201234">>),
 %%  .. {ok,Third_map} = iso8583_erl:set_field(Second_map,4,<<"4.5">>),
 %%  .. {ok,Fourth_map} = iso8583_erl:set_field(Third_map,5,<<"5000">>),
 %%  .. {ok,Fifth_map} = iso8583_erl:set_field(Fourth_map,102,<<"123413243">>),
 %%  .. {ok,Six_map} = iso8583_erl:set_field(Fifth_map,103,<<"12897979987">>),
-%%  .. [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Specification).
+%%  .. [Mti,Bitmap_final_bit,Fields_list] = iso8583_erl:pack(Six_map,Spec).
 %% ["0200","B8000000000000000000000006000000",["201234","0000000004.5","000000005000",["09","123413243"],["11","12897979987"]]]
 %% 136>
 %%'''
@@ -118,9 +119,10 @@ pack(Map_pack,Specification)->
 %%
 %% example below
 %%```
+%% 161> Spec = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/"++"spec.cfg").
 %% 162> Message.
 %% "0200B80000000000000000000000060000002012340000000004.5000000005000091234132431112897979987"
-%% 163> iso8583_erl:unpack(Message,Specification).
+%% 163> iso8583_erl:unpack(Message,Spec).
 %% #{3 => <<"201234">>,4 => <<"0000000004.5">>,
 %%  5 => <<"000000005000">>,102 => <<"123413243">>,
 %%  103 => <<"12897979987">>,mti => <<"0200">>,
@@ -139,7 +141,7 @@ unpack(IsoMessage,Specification)->
 %%
 %% if getting a field,number  must be between 2 and 128.
 %%
-%% example below
+%% example below for getting transaction amount i.e. field 4
 %%```
 %% 175> iso8583_erl:get_field(4,Map_message).
 %% {ok,<<"0000000004.5">>}
@@ -203,7 +205,7 @@ set_mti(Iso_Map,Mti_val)->
 %%
 %% this bitmap is an 8/16 byte binary with each byte being represented  by an integer.
 %%
-%% integer converted to a an 2 bit binary represents presence or absence of those fields
+%% integer converted to a 2 bit binary represents presence or absence of those fields
 %%
 %% example below
 %%```
@@ -222,12 +224,13 @@ create_bitmap(Type_bitmap,Bitmap_final_bit)->
 %%
 %%this is usually done because the receiver of the message expects a header containing the size of the whole message so
 %%
-%%message can be processed on the receiving end of the socket without the socket being closed when a new message is being sent.
+%%message can be processed on the receiving end of the socket in a streaming fashion or as a one of message.
 %%
 %% the length of the header which will hold the size of the message is the second arguement.
 %%
 %% example below
 %%```
+%% 11> Spec = iso8583_erl:load_specification(code:priv_dir(iso8583_erl)++"/"++"spec.cfg").
 %% 12> Message_send = iso8583_erl:set_field_list([{mti,<<"0200">>},{3,<<"201234">>},{4,<<"4.5">>},{5,<<"5000">>},{102,<<"123413243">>},{103,<<"12897979987">>}]).
 %% #{3 => <<"201234">>,4 => <<"4.5">>,5 => <<"5000">>,102 => <<"123413243">>,103 => <<"12897979987">>,mti => <<"0200">>}
 %% 13> Iso_Response = iso8583_erl:pack(Message_send,Spec).
