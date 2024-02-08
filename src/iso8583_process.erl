@@ -312,7 +312,7 @@ get_bitmap_subs(hex,Bin_message,Specification)->
 
 %% @doc for creating the final bitmap
 %%this bitmap is an 8/16 byte binary with each byte being represented  by an integer.
-%%integer converted to a an 2 bit binary represents presence or absence of those fields
+%%integer converted to a 2 bit binary represents presence or absence of those fields
 -spec create_bitmap(binary|hex,binary())->binary()|list().
 create_bitmap(binary,Bitmap_final_bit)->
 		fold_bin(
