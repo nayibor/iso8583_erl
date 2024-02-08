@@ -1,6 +1,6 @@
 {application,iso8583_erl,
              [{description,"An Iso8583 processing library for erlang"},
-              {vsn,"0.4.0"},
+              {vsn,"0.4.1"},
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
