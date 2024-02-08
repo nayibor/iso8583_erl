@@ -1,10 +1,5 @@
-%%%
-%%% @doc iso8583_ascii module.
-%%%<br>this module is responsible for processing string iso messages  format</br>
-%%% @end
-%%% @copyright Nuku Ameyibor <nayibor@startmail.com>
-
-
+%%% @doc this module is responsible for processing iso8583 messages
+%% @author Nuku Ameyibor
 -module(iso8583_process).
 
 -export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,process_data_element/4,create_bitmap/2,
@@ -59,7 +54,14 @@ load_specification(Filename)->
 						true ->
 							maps:put(Number,{Length_field,Fl_vl,Header_length,Format,Pad_info},Acc);
 						false ->
-							throw({<<"Check specification file for correct field configurations and not this value">>,Value})
+						    io:format("**rules for field specifications**~n~p~n~p~n~p~n~p~n**end**~nfind error below and check error field in specification file~n",
+						              [
+						              "variable length fields(header length greater 0) must have pad_info = {none,none},must have  header_length > 0 and length_field > 0",
+						              "fixed length fields(header length equal to 0) can have pad_info = {none,none},must have  header_length >= 0 and length_field > 0",
+						              "fixed length fields(header length equal to 0) can have pad_info = {left,Binary} with 1 char Binary,must have  header_length >= 0 and length_field > 0",
+						              "fixed length fields(header length equal to 0) can have pad_info = {right,Binary} with 1 char Binary,must have header_length >=0 and length_field > 0"
+						              ]),
+							throw({<<"Check specification file for correct field configuration for this field with this value">>,{Number,Value}})
 					end;
 				_ ->
 					Acc
@@ -98,12 +100,12 @@ validate_specification(Spec_info)->
 		{Padleft,Padright} = Pad_info,
 		%%Pacharlength = size(Padright),
 		Fl_vl = fixed_variable(Header_length),
-		case  {Fl_vl,{Padleft,Padright},(is_integer(Header_length) andalso Header_length >=0),(is_integer(Length_field) andalso Length_field >=0)} of
-			{vl,{none,none},true,true}->true;
-			{fx,{none,none},true,true} -> true;
-			{fx,{left,Padright},true,true} when is_binary(Padright)  -> true;
-			{fx,{right,Padright},true,true} when is_binary(Padright) -> true;
-			_ -> false
+		case  {Fl_vl,{Padleft,Padright},(is_integer(Header_length) andalso Header_length >=0),(is_integer(Length_field) andalso Length_field > 0)} of
+			{vl,{none,none},true,true}->true;%%variable length fields with no padding,integer header,integer length of field
+			{fx,{none,none},true,true} -> true;%%fixed length fields with no padding,integer header length,integer length of field
+			{fx,{left,Padright},true,true} when is_binary(Padright)  -> true;%%fixed length fields with left padding,integer header,integer length of field
+			{fx,{right,Padright},true,true} when is_binary(Padright) -> true;%%fixed length fields with right padding,integer header,integer length of field
+			_ -> false %%anything else means an error with the spec for that field
 		end.
 
 
@@ -401,8 +403,8 @@ pad_data_new(Numb_check,Flength,Binary_char_pad,Pad_direction)->
 		end.
 
 
-%%this is a special setting for setting the mti of a message
--spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}.
+%%this is for setting the mti of a message
+-spec set_mti(Iso_Map::map(),Fld_val::binary())->{ok,map()}.
 set_mti(Iso_Map,Fld_val)->
 		{ok,maps:put(mti,Fld_val,Iso_Map)}.
 
@@ -410,7 +412,7 @@ set_mti(Iso_Map,Fld_val)->
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::binary())->{ok,map()}.
 set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
 			mti ->
@@ -422,7 +424,6 @@ set_field(Iso_Map,Fld_num,Fld_val)->
 
 %%this is for accepting a list containing the various fields and then creating an creating an output map 
 %%which can be fed into the pack function
-%%it can also also throw an exception if input data was of the wrong format for an individual field
 -spec set_field_list(List::list())->map().
 set_field_list(List)->
 		First_map = maps:new(),
