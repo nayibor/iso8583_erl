@@ -1,4 +1,5 @@
 %%% @doc this module is responsible for processing iso8583 messages
+%% @author Nuku Ameyibor
 -module(iso8583_process).
 
 -export([unpack/2,pack/2,set_field/3,set_field_list/1,set_mti/2,get_field/2,process_data_element/4,create_bitmap/2,
@@ -402,8 +403,8 @@ pad_data_new(Numb_check,Flength,Binary_char_pad,Pad_direction)->
 		end.
 
 
-%%this is a special setting for setting the mti of a message
--spec set_mti(Iso_Map::map(),Fld_val::term())->{ok,map()}.
+%%this is for setting the mti of a message
+-spec set_mti(Iso_Map::map(),Fld_val::binary())->{ok,map()}.
 set_mti(Iso_Map,Fld_val)->
 		{ok,maps:put(mti,Fld_val,Iso_Map)}.
 
@@ -411,7 +412,7 @@ set_mti(Iso_Map,Fld_val)->
 %% @doc this is for setting a particular field in the message or an mti
 %% field will have to be validated and then after field is validated an entry is created as a map for it 
 %%padding may be added to the field depending on the type of field as well as if its fixed or vlength
--spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::term())->{ok,map()}.
+-spec set_field(Iso_Map::map(),Fld_num::pos_integer()|mti ,Fld_val::binary())->{ok,map()}.
 set_field(Iso_Map,Fld_num,Fld_val)->
 		case Fld_num of 
 			mti ->
@@ -423,7 +424,6 @@ set_field(Iso_Map,Fld_num,Fld_val)->
 
 %%this is for accepting a list containing the various fields and then creating an creating an output map 
 %%which can be fed into the pack function
-%%it can also also throw an exception if input data was of the wrong format for an individual field
 -spec set_field_list(List::list())->map().
 set_field_list(List)->
 		First_map = maps:new(),
