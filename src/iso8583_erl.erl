@@ -6,9 +6,10 @@
 %% API exports
 
 -export([unpack/2,pack/2,get_field/2,set_field/3,set_field_list/1,set_mti/2,
-		 create_bitmap/2,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1,
-		 load_specification_mti/1,get_spec_mti/3,check_mandatory_fields/2,add_echo_fields/3
-		 ]).
+	 create_bitmap/2,get_size_send/2,load_specification/1,get_spec_field/2,get_bitmap_type/1,
+	 load_specification_mti/1,get_spec_mti/3,check_mandatory_fields/2,add_echo_fields/3,
+	 load_specification_using_data/1
+	]).
 
 %%====================================================================
 %% API functions
@@ -31,14 +32,25 @@
 %% @throws {binary(),non_neg_integer(),map()}
 -spec load_specification(string() |binary())->map().
 load_specification(Filename)->
-	iso8583_process:load_specification(Filename).
+    iso8583_process:load_specification(Filename).
+
+
+%% @doc using for loading a specification file from raw data
+%% creates a map which contains the various data elements and the bitmap type from data.
+%% it can be used for loading specification data without using a file.
+%% format should be what is obtained when running the equivalent of file:consult(Path_spec_file)
+%% @end
+%% @throws {binary(),non_neg_integer(),map()}
+-spec load_specification_using_data(term()) -> map().
+load_specification_using_data(Spec_data)->
+    iso8583_process:load_specification_using_data(Spec_data).
 
 
 %% @doc this is for loading field information for the message type indicator(mti)
 %% @hidden
 -spec load_specification_mti(string() |binary())->map().
 load_specification_mti(Filename)->
-	iso8583_process:load_specification_mti(Filename).
+    iso8583_process:load_specification_mti(Filename).
 
 
 %% @doc gets the specification for a particular field.
@@ -54,7 +66,7 @@ load_specification_mti(Filename)->
 %% @end 
 -spec get_spec_field(non_neg_integer(),map())->tuple().
 get_spec_field(Field,Specification)->
-	iso8583_process:get_spec_field(Field,Specification).
+    iso8583_process:get_spec_field(Field,Specification).
 
 
 %% @doc gets the bitmap type from the specification.
@@ -68,28 +80,28 @@ get_spec_field(Field,Specification)->
 %% @end
 -spec get_bitmap_type(map())->hex|binary.
 get_bitmap_type(Specification)->
-	iso8583_process:get_bitmap_type(Specification).
+    iso8583_process:get_bitmap_type(Specification).
 
 
 %% @doc for checking mandatory fields
 %% @hidden
 -spec check_mandatory_fields(list(),map())->true|false.
 check_mandatory_fields(List_mandatory_keys,Map_fields)->
-	iso8583_process:check_mandatory_fields(List_mandatory_keys,Map_fields).
+    iso8583_process:check_mandatory_fields(List_mandatory_keys,Map_fields).
 
 
 %% @doc for adding fields which are supposed to be echoed back to recipient
 %% @hidden
 -spec add_echo_fields(map(),map(),map())->map().
 add_echo_fields(Map_transaction,Map_recipient,Specification_mti)->
-	iso8583_process:add_echo_fields(Map_transaction,Map_recipient,Specification_mti).
+    iso8583_process:add_echo_fields(Map_transaction,Map_recipient,Specification_mti).
 
 
 %% @doc for getting specification info about mti
 %% @hidden
 -spec get_spec_mti(atom(),map(),map())->list()|error.
 get_spec_mti(Spec_type,Mti,Spec_field_map)->
-	iso8583_process:get_spec_mti(Spec_type,Mti,Spec_field_map).
+    iso8583_process:get_spec_mti(Spec_type,Mti,Spec_field_map).
 
 
 %% @doc for packing a map containing iso fields into iolist.
@@ -109,10 +121,10 @@ get_spec_mti(Spec_type,Mti,Spec_field_map)->
 %%'''
 %% @end
 -spec pack(Map_pack,Specification)->list()when
-	Map_pack ::map(),
-	Specification :: map().
+      Map_pack ::map(),
+      Specification :: map().
 pack(Map_pack,Specification)->
-	iso8583_process:pack(Map_pack,Specification).
+    iso8583_process:pack(Map_pack,Specification).
 
 
 %% @doc for unpacking a formatted iso messages from iolist/list into map format.
@@ -131,10 +143,10 @@ pack(Map_pack,Specification)->
 %%'''
 %% @end
 -spec unpack(IsoMessage,Specification) ->map() when
-	IsoMessage		:: [integer()],
-	Specification  	:: map().
+      IsoMessage		:: [integer()],
+      Specification  	:: map().
 unpack(IsoMessage,Specification)-> 
-	iso8583_process:unpack(IsoMessage,Specification).
+    iso8583_process:unpack(IsoMessage,Specification).
 
 
 %% @doc this is for getting a particular field,mti,bitmap in an iso message back
@@ -150,7 +162,7 @@ unpack(IsoMessage,Specification)->
 %% @end 
 -spec get_field(Fld_num::pos_integer()|mti|bit,Iso_Map::map())->{ok,term()}|error.
 get_field(Fld_num,Iso_Map)->
-	iso8583_process:get_field(Fld_num,Iso_Map).
+    iso8583_process:get_field(Fld_num,Iso_Map).
 
 
 %%  @doc for setting the fields for an iso message
@@ -166,7 +178,7 @@ get_field(Fld_num,Iso_Map)->
 %% @end
 -spec set_field(Iso_Map::map(),Fld_num::pos_integer() | mti ,Fld_val::binary())->{ok,map()}.
 set_field(Iso_Map,Fld_num,Fld_val)->
-	iso8583_process:set_field(Iso_Map,Fld_num,Fld_val).
+    iso8583_process:set_field(Iso_Map,Fld_num,Fld_val).
 
 
 %% @doc for setting multiple  fields at the same time
@@ -183,7 +195,7 @@ set_field(Iso_Map,Fld_num,Fld_val)->
 %% @end
 -spec set_field_list(List::list())->map().
 set_field_list(List)->
-	iso8583_process:set_field_list(List).
+    iso8583_process:set_field_list(List).
 
 
 %% @doc this is for setting the mti of a message
@@ -198,7 +210,7 @@ set_field_list(List)->
 %% @end
 -spec set_mti(Iso_Map::map(),Fld_val::binary())->{ok,map()}.
 set_mti(Iso_Map,Mti_val)->
-	iso8583_process:set_mti(Iso_Map,Mti_val).
+    iso8583_process:set_mti(Iso_Map,Mti_val).
 
 
 %% @doc for creating the final bitmap
@@ -217,7 +229,7 @@ set_mti(Iso_Map,Mti_val)->
 %% @end
 -spec create_bitmap(binary|hex,binary())->binary()|list().
 create_bitmap(Type_bitmap,Bitmap_final_bit)->
-	iso8583_process:create_bitmap(Type_bitmap,Bitmap_final_bit).
+    iso8583_process:create_bitmap(Type_bitmap,Bitmap_final_bit).
 
 
 %% @doc for getting the final size of the message to be sent
@@ -251,7 +263,7 @@ create_bitmap(Type_bitmap,Bitmap_final_bit)->
 %% @end
 -spec get_size_send(iolist(),non_neg_integer())->list(). 
 get_size_send(Fields_iolist,Length_max_size)->
-	iso8583_process:get_size_send(Fields_iolist,Length_max_size).
+    iso8583_process:get_size_send(Fields_iolist,Length_max_size).
 %%====================================================================
 %% Internal functions
 %%====================================================================
